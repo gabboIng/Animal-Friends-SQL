@@ -1,29 +1,28 @@
-import Usuario from "../schema/usuarios.js";
+import pool from '../config/dbClient.js';
 
-
-class usuariosModelo{
-    async create(usuario){
-        return await Usuario.create(usuario);
+class usuariosModelo {
+    async create(usuario) {
+        const { nombre, apellido, email, clave, telefono } = usuario;
+        const result = await pool.query(
+            `INSERT INTO usuarios (nombre, apellido, email, clave, telefono)
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [nombre, apellido, email, clave, telefono]
+        );
+        return result.rows[0];
     }
 
-    async update(id, usuario){
-        return await Usuario.findByIdAndUpdate(id, usuario, { new: true });
+    async getOneByEmail(email) {
+        const result = await pool.query(
+            'SELECT * FROM usuarios WHERE email = $1', [email]
+        );
+        return result.rows[0];
     }
 
-    async delete(id){
-        return await Usuario.findByIdAndDelete(id);
-    }
-
-    async getAll(){
-        return await Usuario.find();
-    }
-
-    async getOne(id){
-        return await Usuario.findById(id);
-    }
-
-    async getOneByEmail(email){
-        return await Usuario.findOne({ email });
+    async getOne(id) {
+        const result = await pool.query(
+            'SELECT * FROM usuarios WHERE id = $1', [id]
+        );
+        return result.rows[0];
     }
 }
 

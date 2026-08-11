@@ -37,7 +37,7 @@ class usuarioController {
             return next(new AppError('Contraseña incorrecta', 401));
         }
         const token = generarToken(usuario);
-        res.status(200).json({ status: "ok", message: "Login exitoso", token, usuario: { id: usuario._id, nombre: usuario.nombre, email: usuario.email } });
+        res.status(200).json({ status: "ok", message: "Login exitoso", token, usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email } });
     });
 }
 

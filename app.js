@@ -41,6 +41,6 @@ try {
 
 process.on('SIGINT', async () => {
   console.log('Cerrando la aplicación...');
-  await dbClient.cerrarConexion();
+  await dbClient.end();
   process.exit(0);
 });

@@ -19,8 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="card-info">${mascota.tipo} · ${mascota.edad} años</p>
                         <p class="card-desc">${mascota.descripcion || ''}</p>
                         <div class="card-botones">
-                            <button class="btn-editar" data-id="${mascota._id}" data-nombre="${mascota.nombre}" data-tipo="${mascota.tipo}" data-sexo="${mascota.sexo || ''}" data-edad="${mascota.edad || ''}" data-descripcion="${mascota.descripcion || ''}" data-imagen="${mascota.imagen || ''}" data-adoptado="${mascota.adoptado}">Editar</button>
-                            <button class="btn-eliminar" data-id="${mascota._id}">Eliminar</button>
+                            <button class="btn-editar" data-id="${mascota.id}" data-nombre="${mascota.nombre}" data-tipo="${mascota.tipo}" data-sexo="${mascota.sexo || ''}" data-edad="${mascota.edad || ''}" data-descripcion="${mascota.descripcion || ''}" data-imagen="${mascota.imagen || ''}" data-adoptado="${mascota.adoptado}">Editar</button>
+                            <button class="btn-eliminar" data-id="${mascota.id}">Eliminar</button>
                         </div>
                     </div>
                 </div>
