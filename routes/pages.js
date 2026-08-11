@@ -19,10 +19,15 @@ async function obtenerMascotas(page = 1, limit = 6) {
     };
 }
 
-// ===== PÁGINA INICIAL (HTML) =====
-router.get('/', async (req, res) => {
+// ===== PÁGINA INICIAL → REDIRIGE AL LOGIN =====
+router.get('/', (req, res) => {
+    res.redirect('/login');
+});
+
+// ===== HOME (después del login) =====
+router.get('/home', async (req, res) => {
     const data = await obtenerMascotas(1, 6);
-    res.render('login', { ...data, mostrarLogout: true });
+    res.render('home', { ...data, mostrarLogout: true });
 });
 
 // ===== API JSON para fetch del paginador =====
