@@ -1,0 +1,17 @@
+<nav class="navbar">
+
+    <div class="navbar-contenedor">
+        <a href="/" class="marca"><i class="fa-solid fa-paw"></i> Animal Friends</a>
+        <div class="navbar-links">
+            {{#if mostrarLogin}}
+                <a href="/login">Iniciar Sesión</a>
+            {{/if}}
+            {{#if mostrarRegistro}}
+                <a href="/registro">Registrarse</a>
+            {{/if}}
+            {{#if mostrarLogout}}
+                <a href="/login">Cerrar sesión</a>
+            {{/if}}
+        </div>
+    </div>
+</nav>

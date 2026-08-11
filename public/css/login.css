@@ -1,0 +1,140 @@
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #f5f5f5;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+/* ===== TARJETA DOS PANELES ===== */
+.card.card-login {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 75vw;
+    max-width: 1050px;
+    height: 470px;
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    padding: 0 !important;
+    gap: 0 !important;
+}
+
+/* ===== PANEL IZQUIERDO: IMAGEN ===== */
+.panel-imagen {
+    flex: 1.2;
+    background: url('/img/loginMascotas.png') center no-repeat;
+    background-size: cover;
+    background-color: #f9f9f9;
+    border-radius: 14px 0 0 14px;
+}
+
+/* ===== PANEL DERECHO: FORMULARIO ===== */
+.panel-formulario {
+    flex: 1;
+    padding: 40px 50px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.marca, .titulo-principal, .texto-subtitulo {
+    text-align: center;
+}
+
+#formLogin {
+    text-align: left;
+    width: 100%;
+    max-width: 280px;
+    margin: 0 auto;
+}
+
+
+.marca {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+.titulo-principal {
+    color: var(--headline);
+    font-weight: 700;
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+}
+
+.texto-subtitulo {
+    color: var(--body);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+}
+
+/* ===== FORMULARIO ===== */
+#formLogin .mb-3 {
+    margin-bottom: 16px !important;
+}
+
+#formLogin .mb-4 {
+    margin-bottom: 16px !important;
+}
+
+#formLogin .form-label {
+    font-size: 0.88rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+#formLogin .form-control {
+    padding: 10px 14px;
+    font-size: 0.92rem;
+    border-radius: 8px;
+}
+
+#formLogin .btn {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+}
+
+#formLogin a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.92rem;
+}
+
+#formLogin a:hover {
+    text-decoration: underline;
+    color: var(--primary-hover);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .card-login {
+        width: 90vw;
+        height: auto;
+        flex-direction: column;
+    }
+    .panel-imagen {
+        min-height: 200px;
+        border-radius: 14px 14px 0 0;
+    }
+    .panel-formulario {
+        padding: 30px 24px;
+    }
+    .titulo-principal {
+        font-size: 1.2rem;
+    }
+}

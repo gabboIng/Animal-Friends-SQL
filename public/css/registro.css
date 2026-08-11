@@ -1,0 +1,93 @@
+/* ===== TARJETA DOS PANELES ===== */
+.card-registro {
+    max-width: 600px;
+    width: 85%;
+    border: none;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== PANEL IZQUIERDO: FORMULARIO ===== */
+.panel-formulario {
+    padding: 25px 30px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* ===== MARCA ===== */
+.marca {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+/* ===== TITULOS ===== */
+.titulo-principal {
+    color: var(--headline);
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin-bottom: 3px;
+}
+.texto-subtitulo {
+    color: var(--body);
+    font-size: 0.8rem;
+    margin-bottom: 14px;
+}
+
+/* ===== FORMULARIO ===== */
+#formRegistro .mb-3 {
+    margin-bottom: 10px !important;
+}
+#formRegistro .mb-4 {
+    margin-bottom: 12px !important;
+}
+#formRegistro .form-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+#formRegistro .form-control {
+    padding: 7px 11px;
+    font-size: 0.82rem;
+    border-radius: 8px;
+}
+#formRegistro .btn {
+    padding: 9px 20px;
+    font-size: 0.85rem;
+}
+#formRegistro a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+#formRegistro a:hover {
+    text-decoration: underline;
+    color: var(--primary-hover);
+}
+
+/* ===== PANEL DERECHO: IMAGEN ===== */
+.panel-imagen {
+    background: url('/img/mascotas.png') center/contain no-repeat;
+    background-color: #f9f9f9;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .card-registro {
+        width: 85%;
+        margin: 15px auto;
+    }
+    .panel-formulario {
+        padding: 20px 18px;
+    }
+    .titulo-principal {
+        font-size: 1.05rem;
+    }
+}

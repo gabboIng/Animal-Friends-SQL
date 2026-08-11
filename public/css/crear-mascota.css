@@ -1,0 +1,133 @@
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+/* ===== CARD CONTENEDOR ===== */
+.card-crear {
+    max-width: 900px;
+    width: 90%;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    background: var(--white);
+}
+
+/* ===== ENCABEZADO ===== */
+.form-header {
+    text-align: center;
+    padding: 30px 30px 0;
+}
+.form-header h2 {
+    font-weight: 700;
+    color: var(--headline);
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+}
+.form-header p {
+    color: var(--body);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+/* ===== CUERPO: FLEX ROW ===== */
+.form-body {
+    display: flex;
+    gap: 30px;
+    padding: 30px;
+}
+
+/* ===== PANEL IZQUIERDO: UPLOAD ===== */
+.upload-area {
+    flex: 0 0 220px;
+    height: 220px;
+    border: 2px dashed #ccc;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.3s;
+    background: #fafafa;
+}
+.upload-area:hover {
+    border-color: var(--primary);
+}
+.upload-area .upload-icon {
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 8px;
+}
+.upload-area .upload-text {
+    font-size: 0.85rem;
+    color: var(--body);
+}
+.upload-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+.upload-area.has-image .upload-icon,
+.upload-area.has-image .upload-text {
+    display: none;
+}
+
+/* ===== PANEL DERECHO: CAMPOS ===== */
+.form-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.form-row {
+    display: flex;
+    gap: 16px;
+}
+.form-row .form-group {
+    flex: 1;
+}
+
+/* ===== BOTÓN SUBMIT ===== */
+.btn-submit {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 25px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.btn-submit:hover {
+    background: var(--primary-hover);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .form-body {
+        flex-direction: column;
+        align-items: center;
+    }
+    .upload-area {
+        flex: none;
+        width: 100%;
+        max-width: 300px;
+    }
+    .form-row {
+        flex-direction: column;
+    }
+}

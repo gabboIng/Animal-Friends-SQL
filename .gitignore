@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+.pnpm-store/
+uploads/
+
+# Variables de entorno (nunca subir)
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Configuración local
+.env.local
+.env.development.local
+.env.production.local

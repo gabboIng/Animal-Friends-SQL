@@ -1,0 +1,117 @@
+/* ===== PALETA DE COLORES ===== */
+:root {
+    --primary: #FF6F61;
+    --primary-hover: #e5624f;
+    --secondary: #4A90E2;
+    --tertiary: #FFD166;
+    --neutral: #F8F9FA;
+    --headline: #333333;
+    --body: #555555;
+    --label: #444444;
+    --white: #FFFFFF;
+}
+
+/* ===== TIPOGRAFÍA ===== */
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--body);
+    background-color: var(--neutral);
+    margin: 0;
+    padding: 0;
+}
+
+/* ===== BOTONES ===== */
+.btn-primary-custom {
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: background-color 0.3s;
+}
+.btn-primary-custom:hover {
+    background-color: var(--primary-hover);
+    color: var(--white);
+}
+
+/* ===== FORMULARIOS ===== */
+.form-control {
+    border-radius: 8px;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    font-size: 0.9rem;
+}
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(255, 111, 97, 0.15);
+}
+.form-label {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--label);
+    margin-bottom: 4px;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+    background: var(--white);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    padding: 12px 0;
+}
+
+.navbar-contenedor {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.navbar .marca {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.navbar-links a {
+    color: var(--body);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-left: 24px;
+    transition: color 0.2s;
+}
+
+.navbar-links a:hover {
+    color: var(--primary);
+}
+
+/* ===== FOOTER ===== */
+.footer {
+    background-color: var(--white);
+    border-top: 1px solid #eee;
+    padding: 8px 0;
+    text-align: center;
+}
+.footer strong {
+    color: var(--headline);
+    font-size: 0.85rem;
+}
+.footer small {
+    color: var(--body);
+    font-size: 0.75rem;
+}
+.footer a {
+    color: var(--body);
+    text-decoration: none;
+    margin: 0 8px;
+    font-size: 0.75rem;
+}
+.footer a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
