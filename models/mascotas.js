@@ -65,6 +65,6 @@ class mascotasModelo {
         );
         return result.rows[0];
     }
-}
+} 
 
 export default new mascotasModelo();
