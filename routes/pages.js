@@ -22,7 +22,7 @@ async function obtenerMascotas(page = 1, limit = 6) {
 // ===== PÁGINA INICIAL (HTML) =====
 router.get('/', async (req, res) => {
     const data = await obtenerMascotas(1, 6);
-    res.render('home', { ...data, mostrarLogout: true });
+    res.render('login', { ...data, mostrarLogout: true });
 });
 
 // ===== API JSON para fetch del paginador =====
