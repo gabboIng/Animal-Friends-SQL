@@ -24,7 +24,7 @@ class mascotasController {
             req.body.imagen = "/img/imagen_De_Perfil.png";
         }
         if (!req.body.descripcion) {
-            req.body.descripcion = "Easta mascota espera un hogar";
+            req.body.descripcion = "Esta mascota espera un hogar y tu puedes darcelo ";
         }
         req.body.usuario_id = req.usuario.id;
         const data = await mascotasModel.create(req.body);

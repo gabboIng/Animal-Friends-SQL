@@ -140,6 +140,18 @@
     margin-top: 6px;
 }
 
+.gender-icon {
+    font-size: 0.75rem;
+}
+
+.gender-macho {
+    color: #3a7bc8;
+}
+
+.gender-hembra {
+    color: #ff4d9d;
+}
+
 /* ===== FOOTER ===== */
 .footer-contenedor {
     max-width: 1200px;

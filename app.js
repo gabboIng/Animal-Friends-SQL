@@ -23,6 +23,7 @@ hbs.registerHelper('formatDate', (fecha) => {
     const d = new Date(fecha);
     return d.toLocaleDateString('es-CL');
 });
+hbs.registerHelper('eq', (a, b) => a === b);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
