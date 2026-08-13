@@ -26,6 +26,7 @@ class mascotasController {
         if (!req.body.descripcion) {
             req.body.descripcion = "Easta mascota espera un hogar";
         }
+        req.body.usuario_id = req.usuario.id;
         const data = await mascotasModel.create(req.body);
         res.status(201).json(data);
     });
