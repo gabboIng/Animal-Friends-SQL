@@ -127,6 +127,19 @@
     padding: 60px 0;
 }
 
+/*======adoptado=====*/
+
+.badge-adoptado {
+    display: inline-block;
+    background: #47A248;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-top: 6px;
+}
+
 /* ===== FOOTER ===== */
 .footer-contenedor {
     max-width: 1200px;

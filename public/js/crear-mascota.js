@@ -22,7 +22,6 @@ document.getElementById('formCrearMascota').addEventListener('submit', async (e)
     formData.append('sexo', document.getElementById('sexo').value);
     formData.append('edad', document.getElementById('edad').value);
     formData.append('descripcion', document.getElementById('descripcion').value);
-    formData.append('adoptado', document.getElementById('adoptado').checked);
 
     if (fileInput.files[0]) {
         formData.append('imagen', fileInput.files[0]);
