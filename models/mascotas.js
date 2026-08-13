@@ -38,7 +38,11 @@ class mascotasModelo {
 
     async getAll() {
         const result = await pool.query(
-            'SELECT * FROM mascotas ORDER BY created_at DESC'
+            `SELECT m.*, a.fecha_adopcion, u.nombre AS adoptante_nombre
+                FROM mascotas m
+                LEFT JOIN adopciones a ON m.id = a.mascota_id
+                LEFT JOIN usuarios u ON a.usuario_id = u.id
+                ORDER BY m.created_at DESC`
         );
         return result.rows;
     }
@@ -46,9 +50,10 @@ class mascotasModelo {
     async getPaginated(page = 1, limit = 6) {
         const offset = (page - 1) * limit;
         const result = await pool.query(
-            `SELECT m.*, a.fecha_adopcion
+            `SELECT m.*, a.fecha_adopcion, u.nombre AS adoptante_nombre
                 FROM mascotas m
                 LEFT JOIN adopciones a ON m.id = a.mascota_id
+                LEFT JOIN usuarios u ON a.usuario_id = u.id
                 ORDER BY m.created_at DESC LIMIT $1 OFFSET $2`,
             [limit, offset]
         );
@@ -64,9 +69,10 @@ class mascotasModelo {
 
     async getOne(id) {
         const result = await pool.query(
-            `SELECT m.*, a.fecha_adopcion
+            `SELECT m.*, a.fecha_adopcion, u.nombre AS adoptante_nombre
                 FROM mascotas m
                 LEFT JOIN adopciones a ON m.id = a.mascota_id
+                LEFT JOIN usuarios u ON a.usuario_id = u.id
                 WHERE m.id = $1`, [id]
         );
         return result.rows[0];

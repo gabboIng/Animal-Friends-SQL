@@ -15,10 +15,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="${mascota.imagen}" class="card-img-top" alt="${mascota.nombre}" onerror="this.src='/img/mascotas.png'">
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">${mascota.nombre}</h5>
+                        <h5 class="card-title">${mascota.nombre} ${mascota.sexo === 'Macho' ? '<i class="fa-solid fa-mars gender-icon gender-macho"></i>' : '<i class="fa-solid fa-venus gender-icon gender-hembra"></i>'}</h5>
                         <p class="card-info">${mascota.tipo} · ${mascota.edad} años</p>
                         <p class="card-desc">${mascota.descripcion || ''}</p>
-                        ${mascota.fecha_adopcion ? `<span class="badge-adoptado">Adoptado el ${new Date(mascota.fecha_adopcion).toLocaleDateString('es-CL')}</span>` : ''}
+                        ${mascota.fecha_adopcion ? `<span class="badge-adoptado">Adoptado el ${new Date(mascota.fecha_adopcion).toLocaleDateString('es-CL')} por <i>${mascota.adoptante_nombre || ''}</i></span>` : ''}
                         <div class="card-botones">
                             <button class="btn-editar" data-id="${mascota.id}" data-nombre="${mascota.nombre}" data-tipo="${mascota.tipo}" data-sexo="${mascota.sexo || ''}" data-edad="${mascota.edad || ''}" data-descripcion="${mascota.descripcion || ''}" data-imagen="${mascota.imagen || ''}" data-adoptado="${mascota.fecha_adopcion ? 'true' : 'false'}">Editar</button>
                             <button class="btn-eliminar" data-id="${mascota.id}">Eliminar</button>

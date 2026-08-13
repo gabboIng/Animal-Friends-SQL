@@ -38,11 +38,11 @@
                         <img src="{{this.imagen}}" class="card-img-top" alt="{{this.nombre}}" onerror="this.src='/img/mascotas.png'">
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">{{this.nombre}}</h5>
+                        <h5 class="card-title">{{this.nombre}} {{#if (eq this.sexo "Macho")}}<i class="fa-solid fa-mars gender-icon gender-macho"></i>{{else}}<i class="fa-solid fa-venus gender-icon gender-hembra"></i>{{/if}}</h5>
                         <p class="card-info">{{this.tipo}} · {{this.edad}} años</p>
                         <p class="card-desc">{{this.descripcion}}</p>
                         {{#if this.fecha_adopcion}}
-                        <span class="badge-adoptado">Adoptado el {{formatDate this.fecha_adopcion}}</span>
+                        <span class="badge-adoptado">Adoptado el {{formatDate this.fecha_adopcion}} por <i>{{this.adoptante_nombre}}</i></span>
                         {{/if}}
                         {{#if ../mostrarLogout}}
                         <div class="card-botones">
