@@ -11,6 +11,7 @@ import routesUsuario from './routes/usuario.js';
 import { globalErrorHandler } from './middlewares/errorHandler.js';
 import hbs from 'hbs';
 import routesAdopciones from './routes/adopciones.js'
+import registrarAcceso from './middlewares/registrarAcceso.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,6 +31,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Expone la carpeta uploads como estática para poder ver las imágenes en el navegador
 // (ej: http://localhost:5100/uploads/nombre-archivo.png)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(registrarAcceso);
 app.use('/mascotas', routesMascotas);
 app.use('/usuario', routesUsuario);
 app.use('/adopciones',routesAdopciones)
@@ -43,7 +45,7 @@ try {
     console.log(`El server esta corriendo en el puerto ${PORT}`);
   });       
 } catch (e) {
-  console.error('Error al lebantar servidor :', e);
+  console.error('Error al levantar servidor :', e);
 }
 
 process.on('SIGINT', async () => {
