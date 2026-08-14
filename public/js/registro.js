@@ -14,7 +14,11 @@ document.getElementById('formRegistro').addEventListener('submit', async (e) => 
   });
   const data = await res.json();
   if (data.status === 'ok') {
-   window.location.href = '/login';
+    const msg = document.getElementById('mensaje');
+   msg.className = 'alert alert-success';
+   msg.textContent = 'Registro completado exitosamente';
+   msg.classList.remove('d-none');
+   setTimeout(() => { window.location.href = '/login'; }, 1500);
   } else {
     const msg = document.getElementById('mensaje');
     msg.className = 'alert alert-danger';

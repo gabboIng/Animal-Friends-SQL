@@ -127,6 +127,31 @@
     padding: 60px 0;
 }
 
+/*======adoptado=====*/
+
+.badge-adoptado {
+    display: inline-block;
+    background: #47A248;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-top: 6px;
+}
+
+.gender-icon {
+    font-size: 0.75rem;
+}
+
+.gender-macho {
+    color: #3a7bc8;
+}
+
+.gender-hembra {
+    color: #ff4d9d;
+}
+
 /* ===== FOOTER ===== */
 .footer-contenedor {
     max-width: 1200px;

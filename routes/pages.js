@@ -19,8 +19,13 @@ async function obtenerMascotas(page = 1, limit = 6) {
     };
 }
 
-// ===== PÁGINA INICIAL (HTML) =====
-router.get('/', async (req, res) => {
+// ===== PÁGINA INICIAL → REDIRIGE AL LOGIN =====
+router.get('/', (req, res) => {
+    res.redirect('/login');
+});
+
+// ===== HOME (después del login) =====
+router.get('/home', async (req, res) => {
     const data = await obtenerMascotas(1, 6);
     res.render('home', { ...data, mostrarLogout: true });
 });
@@ -41,5 +46,15 @@ router.get('/crear-mascota', (req, res) => {
 
 router.get('/registro', (req, res) => { res.render('registro', { mostrarLogin: true }); });
 router.get('/login', (req, res) => { res.render('login', { mostrarRegistro: true }); });
+
+// ===== 404 - RUTA NO ENCONTRADA =====
+router.use((req, res) => {
+    res.status(404).render('error', {
+        statusCode: 404,
+        titulo: 'Página no encontrada',
+        mensaje: '!Oh no¡ Parece que nos hemos perdido.',
+        mostrarLogout: true
+    });
+});
 
 export default router;

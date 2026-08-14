@@ -15,11 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="${mascota.imagen}" class="card-img-top" alt="${mascota.nombre}" onerror="this.src='/img/mascotas.png'">
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">${mascota.nombre}</h5>
+                        <h5 class="card-title">${mascota.nombre} ${mascota.sexo === 'Macho' ? '<i class="fa-solid fa-mars gender-icon gender-macho"></i>' : '<i class="fa-solid fa-venus gender-icon gender-hembra"></i>'}</h5>
                         <p class="card-info">${mascota.tipo} · ${mascota.edad} años</p>
                         <p class="card-desc">${mascota.descripcion || ''}</p>
+                        ${mascota.fecha_adopcion ? `<span class="badge-adoptado">Adoptado el ${new Date(mascota.fecha_adopcion).toLocaleDateString('es-CL')} por <i>${mascota.adoptante_nombre || ''}</i></span>` : ''}
                         <div class="card-botones">
-                            <button class="btn-editar" data-id="${mascota.id}" data-nombre="${mascota.nombre}" data-tipo="${mascota.tipo}" data-sexo="${mascota.sexo || ''}" data-edad="${mascota.edad || ''}" data-descripcion="${mascota.descripcion || ''}" data-imagen="${mascota.imagen || ''}" data-adoptado="${mascota.adoptado}">Editar</button>
+                            <button class="btn-editar" data-id="${mascota.id}" data-nombre="${mascota.nombre}" data-tipo="${mascota.tipo}" data-sexo="${mascota.sexo || ''}" data-edad="${mascota.edad || ''}" data-descripcion="${mascota.descripcion || ''}" data-imagen="${mascota.imagen || ''}" data-adoptado="${mascota.fecha_adopcion ? 'true' : 'false'}">Editar</button>
                             <button class="btn-eliminar" data-id="${mascota.id}">Eliminar</button>
                         </div>
                     </div>
@@ -84,7 +85,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editarSexo').value = btnEditar.dataset.sexo;
             document.getElementById('editarEdad').value = btnEditar.dataset.edad;
             document.getElementById('editarDescripcion').value = btnEditar.dataset.descripcion;
-            document.getElementById('editarAdoptado').checked = btnEditar.dataset.adoptado === 'true';
+
+            const btnAdoptar = document.getElementById('btnAdoptar');
+            btnAdoptar.style.display = btnEditar.dataset.adoptado === 'true' ? 'none' : 'inline-block';
 
             const previewImg = document.getElementById('editarPreview');
             const imgSrc = btnEditar.dataset.imagen;
@@ -110,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('sexo', document.getElementById('editarSexo').value);
         formData.append('edad', document.getElementById('editarEdad').value);
         formData.append('descripcion', document.getElementById('editarDescripcion').value);
-        formData.append('adoptado', document.getElementById('editarAdoptado').checked);
 
         const imagen = document.getElementById('editarImagen').files[0];
         if (imagen) formData.append('imagen', imagen);
@@ -131,7 +133,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 6. Interceptar clics en el paginador (event delegation)
+    // 7. Adoptar mascota desde el modal
+    document.getElementById('btnAdoptar').addEventListener('click', async () => {
+        const id = document.getElementById('editarId').value;
+        const token = localStorage.getItem('token');
+
+        const result = await Swal.fire({
+            title: '¿Adoptar esta mascota?',
+            text: 'Confirmá para registrar la adopción',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#47A248',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, adoptar',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (!result.isConfirmed) return;
+
+        const res = await fetch('/adopciones', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ mascota_id: id })
+        });
+
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+            Swal.fire('Adoptada', 'La adopción fue registrada', 'success');
+            const match = document.querySelector('.pagina-actual')?.textContent.match(/Página (\d+)/);
+            cargarPagina(match ? parseInt(match[1]) : 1);
+        } else {
+            const data = await res.json().catch(() => ({}));
+            Swal.fire('Error', data.message || 'No se pudo registrar la adopción', 'error');
+        }
+    });
+
+    // 8. Interceptar clics en el paginador (event delegation)
     paginador.addEventListener('click', (e) => {
         e.preventDefault();
         const btn = e.target.closest('[data-page]');

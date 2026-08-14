@@ -12,7 +12,7 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     if (data.status === 'ok') {
         localStorage.setItem('token', data.token);
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
-        window.location.href = '/';
+        window.location.href = '/home';
     } else {
         const msg = document.getElementById('mensaje');
         msg.className = 'alert alert-danger';
