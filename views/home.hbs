@@ -28,7 +28,7 @@
             <div class="hero-imagen"></div>
         </section>
 
-        <h2 class="titulo-seccion" id="mascotas">Mascotas Disponibles para Adopción</h2>
+        <h2 class="titulo-seccion" id="mascotas">Mascotas para Adopción</h2>
 
         <div class="row g-5">
             {{#each mascotas}}
@@ -38,12 +38,15 @@
                         <img src="{{this.imagen}}" class="card-img-top" alt="{{this.nombre}}" onerror="this.src='/img/mascotas.png'">
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">{{this.nombre}}</h5>
+                        <h5 class="card-title">{{this.nombre}} {{#if (eq this.sexo "Macho")}}<i class="fa-solid fa-mars gender-icon gender-macho"></i>{{else}}<i class="fa-solid fa-venus gender-icon gender-hembra"></i>{{/if}}</h5>
                         <p class="card-info">{{this.tipo}} · {{this.edad}} años</p>
                         <p class="card-desc">{{this.descripcion}}</p>
+                        {{#if this.fecha_adopcion}}
+                        <span class="badge-adoptado">Adoptado el {{formatDate this.fecha_adopcion}} por <i>{{this.adoptante_nombre}}</i></span>
+                        {{/if}}
                         {{#if ../mostrarLogout}}
                         <div class="card-botones">
-                            <button class="btn-editar" data-id="{{this.id}}" data-nombre="{{this.nombre}}" data-tipo="{{this.tipo}}" data-sexo="{{this.sexo}}" data-edad="{{this.edad}}" data-descripcion="{{this.descripcion}}" data-imagen="{{this.imagen}}" data-adoptado="{{this.adoptado}}">Editar</button>
+                            <button class="btn-editar" data-id="{{this.id}}" data-nombre="{{this.nombre}}" data-tipo="{{this.tipo}}" data-sexo="{{this.sexo}}" data-edad="{{this.edad}}" data-descripcion="{{this.descripcion}}" data-imagen="{{this.imagen}}" data-adoptado="{{#if this.fecha_adopcion}}true{{else}}false{{/if}}">Editar</button>
                             <button class="btn-eliminar" data-id="{{this.id}}">Eliminar</button>
                         </div>
                         {{/if}}
@@ -125,13 +128,10 @@
                             <label class="form-label">Nueva imagen (opcional)</label>
                             <input type="file" id="editarImagen" class="form-control" accept="image/*">
                         </div>
-                        <div class="form-check mb-3">
-                            <input type="checkbox" id="editarAdoptado" class="form-check-input">
-                            <label class="form-check-label">¿Ya adoptado?</label>
-                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-success" id="btnAdoptar">Adoptar</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="btnGuardarEditar">Guardar Cambios</button>
                 </div>
