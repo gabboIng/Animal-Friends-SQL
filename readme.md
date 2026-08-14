@@ -1,30 +1,32 @@
-#  Animal Friends
+# Animal Friends
 
-Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios registrarse, publicar mascotas disponibles para adopción, editarlas, eliminarlas y navegar por un catálogo paginado.
+Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios registrarse, publicar mascotas disponibles para adopción, editarlas, eliminarlas, adoptarlas y navegar por un catálogo paginado.
 
 ![Hero Banner](public/img/mascota2.png)
 
 ---
 
-##  Características
+## Características
 
 - **CRUD completo** de mascotas (Crear, Leer, Editar, Eliminar)
-- **Autenticación JWT** con registro e inicio de sesión
-- **Paginación** del catálogo de mascotas
+- **Autenticación JWT** con registro e inicio de sesión (contraseñas con bcrypt)
+- **Registro de adopciones**: cada mascota puede ser adoptada una sola vez; la fecha de adopción y el nombre del adoptante se muestran en las cards
+- **Paginación** del catálogo de mascotas sin recargar la página
 - **Subida de imágenes** con conversión automática a WebP (Sharp)
+- **Página de error personalizada** (404/500) con imagen y sticky footer
 - **Diseño responsivo** con Bootstrap 5
 - **Alertas interactivas** con SweetAlert2
 
 ---
 
-##  Tecnologías
+## Tecnologías
 
 | Categoría | Tecnología |
 |-----------|------------|
 | Backend | Express.js 5, Node.js |
-| Base de datos | MongoDB Atlas, Mongoose 9 |
+| Base de datos | PostgreSQL (pg, Pool) |
 | Motor de plantillas | Handlebars (hbs) |
-| Autenticación | JWT, bcrypt |
+| Autenticación | JWT (jsonwebtoken), bcrypt |
 | Subida de imágenes | Multer, Sharp |
 | Frontend | Bootstrap 5, CSS custom, JavaScript vanilla |
 | Alertas | SweetAlert2 |
@@ -32,217 +34,158 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 
 ---
 
-##  Arquitectura del Proyecto
+## Arquitectura del Proyecto
 
-El proyecto sigue el patrón **MVC** (Modelo-Vista-Controlador) con una capa adicional de schemas para Mongoose.
+El proyecto sigue el patrón **MVC** (Modelo-Vista-Controlador):
 
-```mermaid
-graph TB
-    subgraph "Frontend"
-        A[Navegador] -->|HTTP| B[Express.js]
-        B -->|HTML + CSS| A
-    end
-
-    subgraph "Backend (MVC)"
-        B --> C[Routes]
-        C --> D[Controllers]
-        D --> E[Models]
-        E --> F[Mongoose Schemas]
-        D --> G[Utils<br/>AppError, catchAsync]
-    end
-
-    subgraph "Base de Datos"
-        F -->|Mongoose| H[(MongoDB Atlas)]
-    end
-
-    subgraph "Archivos"
-        D -->|Multer + Sharp| I[uploads/<br/>Imágenes WebP]
-    end
-
-    subgraph "Frontend Assets"
-        B --> J[public/css/]
-        B --> K[public/js/]
-        B --> L[public/img/]
-    end
-
-    style A fill:#4A90E2,color:#fff
-    style H fill:#47A248,color:#fff
-    style I fill:#FFD166,color:#000
-```
+- **Models**: consultas SQL parametrizadas sobre PostgreSQL (`mascotas`, `usuario`, `adopciones`).
+- **Controllers**: lógica de negocio (validaciones, procesamiento de imágenes, respuestas HTTP).
+- **Views**: plantillas Handlebars renderizadas en el servidor (`home`, `login`, `registro`, `crear-mascota`, `error`) con partials compartidos (`header`, `footer`).
+- **Routes**: separación entre páginas HTML y API REST.
+- **Middlewares**: autenticación JWT y manejo global de errores.
+- **Utils**: `AppError` (errores operacionales) y `catchAsync` (wrapper async/await).
+- **Config**: conexión a PostgreSQL (`dbClient`), carga de archivos (`multer`) y procesamiento de imágenes (`procesarImagen`).
 
 ---
 
-##  Base de Datos
+## Base de Datos
 
-La base de datos **adopcion** en MongoDB Atlas contiene dos colecciones:
+La base de datos **adopcion** en PostgreSQL contiene tres tablas:
+
+### Tabla: usuarios
+
+| Campo | Tipo | Requisito | Descripción |
+|-------|------|-----------|-------------|
+| `id` | SERIAL | PK | Identificador único |
+| `nombre` | VARCHAR(255) | Requerido | Nombre del usuario |
+| `apellido` | VARCHAR(255) | Requerido | Apellido del usuario |
+| `email` | VARCHAR(255) | Requerido, único | Email |
+| `clave` | VARCHAR(255) | Requerido | Contraseña (hash bcrypt) |
+| `telefono` | NUMERIC | Opcional | Número de teléfono |
+| `created_at` | TIMESTAMP | Auto | Fecha de creación |
+| `updated_at` | TIMESTAMP | Auto | Fecha de última actualización |
+
+### Tabla: mascotas
+
+| Campo | Tipo | Requisito | Descripción |
+|-------|------|-----------|-------------|
+| `id` | SERIAL | PK | Identificador único |
+| `nombre` | VARCHAR(255) | Requerido | Nombre de la mascota |
+| `tipo` | VARCHAR(255) | Requerido | Tipo (Perro, Gato, Ave, Otro) |
+| `sexo` | VARCHAR(10) | Requerido | Macho o Hembra (CHECK) |
+| `edad` | NUMERIC | Requerido | Edad entre 0 y 30 (CHECK) |
+| `imagen` | VARCHAR(500) | Opcional | Ruta de la imagen (WebP) |
+| `descripcion` | TEXT | Opcional | Descripción de la mascota |
+| `usuario_id` | INTEGER | Requerido (FK) | Usuario que publicó la mascota |
+| `created_at` | TIMESTAMP | Auto | Fecha de creación |
+| `updated_at` | TIMESTAMP | Auto | Fecha de última actualización |
+
+### Tabla: adopciones
+
+| Campo | Tipo | Requisito | Descripción |
+|-------|------|-----------|-------------|
+| `id` | SERIAL | PK | Identificador único |
+| `usuario_id` | INTEGER | Requerido (FK) | Usuario que adopta |
+| `mascota_id` | INTEGER | Requerido (FK, UNIQUE) | Mascota adoptada (una vez) |
+| `fecha_adopcion` | TIMESTAMP | Auto | Fecha de la adopción |
+
+### Relaciones
+
+- Un **usuario** publica muchas **mascotas** (1:N a través de `mascotas.usuario_id`).
+- Un **usuario** puede registrar muchas **adopciones** (1:N a través de `adopciones.usuario_id`).
+- Una **mascota** tiene como máximo **una** adopción (1:1 a través de `UNIQUE(mascota_id)`).
 
 ### Diagrama Entidad-Relación
 
 ```mermaid
 erDiagram
     USUARIOS {
-        ObjectId _id PK
-        String nombre
-        String apellido
-        String email UK
-        String clave
-        Number telefono
-        Date createdAt
-        Date updatedAt
+        SERIAL id PK
+        VARCHAR nombre
+        VARCHAR apellido
+        VARCHAR email UK
+        VARCHAR clave
+        NUMERIC telefono
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
     }
 
     MASCOTAS {
-        ObjectId _id PK
-        String nombre
-        String tipo
-        String sexo
-        Number edad
-        Boolean adoptado
-        String imagen
-        String descripcion
-        Date createdAt
-        Date updatedAt
+        SERIAL id PK
+        VARCHAR nombre
+        VARCHAR tipo
+        VARCHAR sexo
+        NUMERIC edad
+        VARCHAR imagen
+        TEXT descripcion
+        INTEGER usuario_id FK
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    ADOPCIONES {
+        SERIAL id PK
+        INTEGER usuario_id FK
+        INTEGER mascota_id FK
+        TIMESTAMP fecha_adopcion
     }
 
     USUARIOS ||--o{ MASCOTAS : "publica"
+    USUARIOS ||--o{ ADOPCIONES : "adopta"
+    MASCOTAS ||--o| ADOPCIONES : "es adoptada"
 ```
 
-### Colección: usuarios
-
-| Campo | Tipo | Requisito | Descripción |
-|-------|------|-----------|-------------|
-| `_id` | ObjectId | Auto | Identificador único |
-| `nombre` | String | Requerido | Nombre del usuario |
-| `apellido` | String | Requerido | Apellido del usuario |
-| `email` | String | Requerido, único | Email (lowercase, trimmed) |
-| `clave` | String | Requerido | Contraseña (hash bcrypt) |
-| `telefono` | Number | Opcional | Número de teléfono |
-| `createdAt` | Date | Auto | Fecha de creación |
-| `updatedAt` | Date | Auto | Fecha de última actualización |
-
-### Colección: mascotas
-
-| Campo | Tipo | Requisito | Descripción |
-|-------|------|-----------|-------------|
-| `_id` | ObjectId | Auto | Identificador único |
-| `nombre` | String | Requerido | Nombre de la mascota |
-| `tipo` | String | Requerido | Tipo (Perro, Gato, Ave, Otro) |
-| `sexo` | String | Requerido | Macho o Hembra (enum) |
-| `edad` | Number | Requerido | Edad (0-30) |
-| `adoptado` | Boolean | Default: false | Estado de adopción |
-| `imagen` | String | Opcional | Ruta de la imagen (WebP) |
-| `descripcion` | String | Opcional | Descripción de la mascota |
-| `createdAt` | Date | Auto | Fecha de creación |
-| `updatedAt` | Date | Auto | Fecha de última actualización |
+El esquema completo se encuentra en `sql/init.sql`.
 
 ---
 
-##  Flujo del Usuario
+## Flujo del Usuario
 
-### Flujo principal de navegación
+1. El visitante llega a la aplicación y es redirigido a **Iniciar Sesión** (`/login`).
+2. Si no tiene cuenta, puede **Registrarse** (`/registro`); el registro devuelve al login.
+3. Al iniciar sesión, el backend entrega un **token JWT** que se guarda en `localStorage`.
+4. En el **home** (`/home`) se muestra el catálogo paginado de mascotas. Cada card muestra nombre, tipo, edad, descripción, sexo (icono) y, si fue adoptada, la fecha de adopción y el adoptante.
+5. Desde el home se puede **Crear Mascota** (`/crear-mascota`) con subida de imagen.
+6. Desde el modal de cada card se puede **Editar**, **Eliminar** o **Adoptar** la mascota (con confirmación vía SweetAlert).
+7. La **paginación** actualiza las cards vía `GET /api/mascotas?page=&limit=` sin recargar la página.
+
+### Diagrama de interacción del usuario
 
 ```mermaid
-flowchart TD
-    START([🌐 Inicio]) --> HOME[Página Principal<br/>/]
+flowchart LR
+    INICIO([Visita la web]) --> LOGIN[Inicia sesión o se registra]
+    LOGIN --> HOME[Home / Catálogo de mascotas]
+    HOME --> EXPLORAR[Explora las mascotas]
+    HOME --> CREAR[Publica una mascota]
+    HOME --> GESTIONAR[Edita o elimina sus mascotas]
+    HOME --> ADOPTAR[Adopta una mascota]
+    GESTIONAR --> HOME
+    ADOPTAR --> HOME
+    CREAR --> HOME
+    EXPLORAR --> HOME
+    HOME --> FIN([Cierra sesión])
 
-    HOME -->|No autenticado| LOGIN_OPTIONS{¿Qué desea hacer?}
-    LOGIN_OPTIONS -->|Tiene cuenta| LOGIN[Iniciar Sesión<br/>/login]
-    LOGIN_OPTIONS -->|No tiene cuenta| REGISTRAR[Registrarse<br/>/registro]
-
-    REGISTRAR -->|POST /usuario/registrar| LOGIN
-    LOGIN -->|POST /usuario/login| TOKEN[JWT Token<br/>localStorage]
-    TOKEN --> HOME_AUTH[Página Principal<br/>/]
-
-    HOME_AUTH -->|Autenticado| NAV_OPTIONS{Navegación}
-    NAV_OPTIONS -->|"+ Agregar Mascota"| CREAR[Crear Mascota<br/>/crear-mascota]
-    NAV_OPTIONS -->|Ver catálogo| BROWSE[Explorar Mascotas<br/>Paginación]
-    NAV_OPTIONS -->|"Cerrar sesión"| LOGOUT[Logout<br/>localStorage → /]
-
-    CREAR -->|POST /mascotas| UPLOAD[Subir Imagen<br/>Multer + Sharp]
-    UPLOAD -->|Guarda en uploads/| DB_CREATE[(MongoDB<br/>Insert)]
-    DB_CREATE -->|SweetAlert Éxito| HOME_AUTH
-
-    BROWSE --> CARD{Acciones}
-    CARD -->|Click paginación| FETCH[GET /api/mascotas<br/>?page=&limit=]
-    FETCH --> REBUILD[Reconstruir Cards]
-    REBUILD --> CARD
-
-    CARD -->|" Editar"| MODAL[Modal Bootstrap<br/>Editar Mascota]
-    MODAL -->|PUT /mascotas/:id| DB_UPDATE[(MongoDB<br/>Update)]
-    DB_UPDATE --> HOME_AUTH
-
-    CARD -->|" Eliminar"| CONFIRM[SweetAlert<br/>¿Eliminar?]
-    CONFIRM -->|Sí| DELETE[DELETE /mascotas/:id]
-    DELETE --> DEL_FILE[Eliminar Archivo<br/>uploads/]
-    DEL_FILE --> DB_DELETE[(MongoDB<br/>Delete)]
-    DB_DELETE --> HOME_AUTH
-
-    LOGOUT --> START
-
-    style START fill:#4A90E2,color:#fff
+    style INICIO fill:#4A90E2,color:#fff
     style HOME fill:#FF6F61,color:#fff
-    style HOME_AUTH fill:#FF6F61,color:#fff
-    style TOKEN fill:#FFD166,color:#000
-    style DB_CREATE fill:#47A248,color:#fff
-    style DB_UPDATE fill:#47A248,color:#fff
-    style DB_DELETE fill:#47A248,color:#fff
-    style CONFIRM fill:#e74c3c,color:#fff
-```
-
-### Flujo de autenticación
-
-```mermaid
-sequenceDiagram
-    participant U as Usuario
-    participant FE as Frontend
-    participant BE as Backend
-    participant DB as MongoDB
-
-    Note over U,DB: Registro
-    U->>FE: Completa formulario
-    FE->>BE: POST /usuario/registrar
-    BE->>BE: bcrypt hash (10 rounds)
-    BE->>DB: Guardar usuario
-    DB-->>BE: OK
-    BE-->>FE: 201 + datos usuario
-    FE-->>U: Redirigir a /login
-
-    Note over U,DB: Inicio de Sesión
-    U->>FE: Ingresa email + contraseña
-    FE->>BE: POST /usuario/login
-    BE->>DB: Buscar por email
-    DB-->>BE: usuario
-    BE->>BE: bcrypt.compare()
-    BE->>BE: generarToken() → JWT (1h)
-    BE-->>FE: 200 + token + info
-    FE->>FE: localStorage.setItem('token')
-    FE-->>U: Redirigir a /
-
-    Note over U,DB: Request Autenticado
-    U->>FE: Acción protegida (CRUD)
-    FE->>BE: Authorization: Bearer {token}
-    BE->>BE: verificarToken() middleware
-    BE->>BE: Decodificar payload
-    BE->>BE: req.usuario = decoded
-    BE-->>FE: 200 + datos
+    style FIN fill:#555,color:#fff
 ```
 
 ---
 
-##  Instalación
+## Instalación
 
 ### Prerrequisitos
 
 - [Node.js](https://nodejs.org/) v18+
 - [pnpm](https://pnpm.io/) v11+
-- [MongoDB Atlas](https://www.mongodb.com/atlas) (cuenta gratuita)
+- [PostgreSQL](https://www.postgresql.org/)
 
 ### Pasos
 
 1. **Clonar el repositorio**
    ```bash
-   git clone https://github.com/gabboIng/Animal-Friends.git
-   cd Animal-Friends
+   git clone https://github.com/gabboIng/Animal-Friends-SQL.git
+   cd Animal-Friends-SQL
    ```
 
 2. **Instalar dependencias**
@@ -250,47 +193,52 @@ sequenceDiagram
    pnpm install
    ```
 
-3. **Configurar variables de entorno**
+3. **Crear la base de datos y las tablas**
 
-   Crear archivo `.env` en la raíz:
+   En PostgreSQL, crear la base de datos y ejecutar el script:
+   ```bash
+   psql -U postgres -d postgres -c "CREATE DATABASE adopcion;"
+   psql -U postgres -d adopcion -f sql/init.sql
+   ```
+
+4. **Configurar variables de entorno**
+
+   Crear archivo `.env` en la raíz con tus credenciales:
    ```env
    PORT=5100
-   SERVER_DB=tu_cluster.mongodb.net
-   USER_DB=tu_usuario_db
-   PASS_DB=tu_contraseña
-   DB_HOSTS=host1:27017,host2:27017,host3:27017
-   DB_REPLICA_SET=tu_replica_set
-   DB_AUTH_SOURCE=admin
-   db_Name=adopcion
+   DATABASE_URL=postgresql://postgres:1234@localhost:5432/adopcion
    JWT_SECRET=tu_secreto_ultra_seguro
    ```
 
-4. **Iniciar el servidor**
+5. **Iniciar el servidor**
    ```bash
    node app.js
+   # o con auto-reinicio en desarrollo:
+   pnpm exec nodemon app.js
    ```
 
-5. **Abrir en el navegador**
+6. **Abrir en el navegador**
    ```
    http://localhost:5100
    ```
 
 ---
 
-##  Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
-Animal-Friends/
-├── app.js                    # Punto de entrada
+Animal-Friends-SQL/
+├── app.js                    # Punto de entrada (Express, hbs, rutas, errores)
 ├── .env                      # Variables de entorno (no commitear)
 ├── package.json
 │
 ├── config/
-│   ├── dbClient.js           # Conexión MongoDB (Mongoose)
-│   ├── multer.js             # Config subida de archivos
-│   └── procesarImagen.js     # Conversión imágenes → WebP
+│   ├── dbClient.js           # Conexión PostgreSQL (pg Pool)
+│   ├── multer.js             # Config subida de archivos (máx. 10 MB)
+│   └── procesarImagen.js     # Conversión de imágenes → WebP (Sharp)
 │
 ├── controllers/
+│   ├── adopciones.js         # Adoptar mascota + listar adopciones
 │   ├── mascotas.js           # CRUD mascotas
 │   └── usuario.js            # Registro + Login
 │
@@ -298,37 +246,39 @@ Animal-Friends/
 │   └── autenticacion.js      # JWT: generarToken + verificarToken
 │
 ├── middlewares/
-│   └── errorHandler.js       # Manejo global de errores
+│   └── errorHandler.js       # Manejo global de errores (HTML o JSON)
 │
 ├── models/
-│   ├── mascotas.js           # Modelo mascotas (paginación, CRUD)
-│   └── usuario.js            # Modelo usuarios
+│   ├── adopciones.js         # Queries SQL adopciones
+│   ├── mascotas.js           # Queries SQL mascotas (paginación, joins)
+│   └── usuario.js            # Queries SQL usuarios
 │
 ├── routes/
-│   ├── mascotas.js           # API REST mascotas
-│   ├── pages.js              # Rutas de páginas (HTML)
+│   ├── adopciones.js         # POST / y GET / (JWT)
+│   ├── mascotas.js           # API REST mascotas (JWT)
+│   ├── pages.js              # Rutas de páginas (HTML) + catch-all 404
 │   └── usuario.js            # API REST usuarios
 │
-├── schema/
-│   ├── mascotas.js           # Schema Mongoose mascotas
-│   └── usuarios.js           # Schema Mongoose usuarios
+├── sql/
+│   └── init.sql              # Esquema PostgreSQL (usuarios, mascotas, adopciones)
 │
 ├── utils/
 │   ├── AppError.js           # Clase error personalizada
 │   └── catchAsync.js         # Wrapper async/await
 │
 ├── public/
-│   ├── css/                  # Estilos (shared, home, login, registro, crear-mascota)
+│   ├── css/                  # shared, home, login, registro, crear-mascota, error
 │   ├── img/                  # Imágenes estáticas
-│   └── js/                   # Scripts del cliente (paginador, login, registro, crear-mascota)
+│   └── js/                   # paginador, login, registro, crear-mascota
 │
 ├── uploads/                  # Imágenes subidas (no commitear)
 │
 └── views/
-    ├── home.hbs              # Página principal + catálogo + modal editar
+    ├── home.hbs              # Página principal + catálogo + modal editar/adoptar
     ├── login.hbs             # Inicio de sesión
     ├── registro.hbs          # Registro de usuario
     ├── crear-mascota.hbs     # Formulario crear mascota
+    ├── error.hbs             # Página de error (404/500)
     └── partials/
         ├── header.hbs        # Navbar (links condicionales)
         └── footer.hbs        # Footer + CDN SweetAlert2 + scripts
@@ -336,16 +286,18 @@ Animal-Friends/
 
 ---
 
-## 🌐 API Routes
+## API Routes
 
 ### Páginas (HTML)
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/` | Página principal con catálogo paginado |
+| `GET` | `/` | Redirige a `/login` |
+| `GET` | `/home` | Catálogo paginado de mascotas |
 | `GET` | `/login` | Página de inicio de sesión |
 | `GET` | `/registro` | Página de registro |
 | `GET` | `/crear-mascota` | Formulario para crear mascota |
+| `GET` | `*` | Página de error 404 (catch-all) |
 
 ### Mascotas (API REST) — requiere JWT
 
@@ -370,8 +322,15 @@ Animal-Friends/
 | `POST` | `/usuario/registrar` | Registrar usuario |
 | `POST` | `/usuario/login` | Iniciar sesión (devuelve JWT) |
 
+### Adopciones (API REST)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/adopciones` | Registrar adopción (requiere JWT) |
+| `GET` | `/adopciones` | Listar adopciones con nombre de mascota y adoptante |
+
 ---
 
-##  Autor
+## Autor
 
 **gabboIng** — [GitHub](https://github.com/gabboIng)
