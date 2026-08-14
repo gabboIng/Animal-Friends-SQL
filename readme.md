@@ -14,6 +14,7 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 - **Paginación** del catálogo de mascotas sin recargar la página
 - **Subida de imágenes** con conversión automática a WebP (Sharp)
 - **Página de error personalizada** (404/500) con imagen y sticky footer
+- **Registro de accesos en archivos planos** (`logs/log.txt`) con fecha, hora y ruta accedida
 - **Diseño responsivo** con Bootstrap 5
 - **Alertas interactivas** con SweetAlert2
 
@@ -42,7 +43,7 @@ El proyecto sigue el patrón **MVC** (Modelo-Vista-Controlador):
 - **Controllers**: lógica de negocio (validaciones, procesamiento de imágenes, respuestas HTTP).
 - **Views**: plantillas Handlebars renderizadas en el servidor (`home`, `login`, `registro`, `crear-mascota`, `error`) con partials compartidos (`header`, `footer`).
 - **Routes**: separación entre páginas HTML y API REST.
-- **Middlewares**: autenticación JWT y manejo global de errores.
+- **Middlewares**: autenticación JWT, registro de accesos en archivos planos y manejo global de errores.
 - **Utils**: `AppError` (errores operacionales) y `catchAsync` (wrapper async/await).
 - **Config**: conexión a PostgreSQL (`dbClient`), carga de archivos (`multer`) y procesamiento de imágenes (`procesarImagen`).
 
@@ -212,10 +213,12 @@ flowchart LR
 
 5. **Iniciar el servidor**
    ```bash
-   node app.js
-   # o con auto-reinicio en desarrollo:
-   pnpm exec nodemon app.js
+   # modo desarrollo (con auto-reinicio vía nodemon):
+   npm run dev
+   # o producción:
+   npm start
    ```
+   > Si usas `pnpm`, los mismos scripts funcionan con `pnpm run dev` / `pnpm start`.
 
 6. **Abrir en el navegador**
    ```
@@ -224,43 +227,60 @@ flowchart LR
 
 ---
 
+## Registro de Accesos (Logs)
+
+Cada petición recibida se registra en `logs/log.txt` mediante el middleware `middlewares/registrarAcceso.js`, que usa `fs.appendFileSync` para agregar una línea por acceso con la estructura mínima: **fecha, hora y ruta accedida** (más el método HTTP).
+
+```
+[14-08-2026, 12:05:33] GET /login
+[14-08-2026, 12:05:41] GET /home
+[14-08-2026, 12:06:02] GET /api/mascotas?page=2&limit=6
+```
+
+**Justificación de la decisión:** se optó por registrar **todas** las rutas (no solo una) mediante un middleware global, porque permite auditar el uso real de la aplicación sin duplicar lógica en cada ruta. El formato es una sola línea por evento para facilitar la lectura y el procesamiento posterior. La carpeta `logs/` está ignorada por Git, por lo que los accesos generados localmente no se suben al repositorio.
+
 ## Estructura del Proyecto
 
 ```
 Animal-Friends-SQL/
-├── app.js                    # Punto de entrada (Express, hbs, rutas, errores)
-├── .env                      # Variables de entorno (no commitear)
+├── app.js                      # Punto de entrada (Express, hbs, rutas, errores)
+├── .env                        # Variables de entorno (no commitear)
+├── .env.example                # Plantilla de variables de entorno
 ├── package.json
 │
 ├── config/
-│   ├── dbClient.js           # Conexión PostgreSQL (pg Pool)
-│   ├── multer.js             # Config subida de archivos (máx. 10 MB)
-│   └── procesarImagen.js     # Conversión de imágenes → WebP (Sharp)
+│   ├── dbClient.js             # Conexión PostgreSQL (pg Pool)
+│   ├── multer.js               # Config subida de archivos (máx. 10 MB)
+│   └── procesarImagen.js       # Conversión de imágenes → WebP (Sharp)
 │
 ├── controllers/
-│   ├── adopciones.js         # Adoptar mascota + listar adopciones
-│   ├── mascotas.js           # CRUD mascotas
-│   └── usuario.js            # Registro + Login
+│   ├── adopciones.js           # Adoptar mascota + listar adopciones
+│   ├── mascotas.js             # CRUD mascotas
+│   └── usuario.js              # Registro + Login
 │
 ├── helpers/
-│   └── autenticacion.js      # JWT: generarToken + verificarToken
+│   └── autenticacion.js        # JWT: generarToken + verificarToken
 │
 ├── middlewares/
-│   └── errorHandler.js       # Manejo global de errores (HTML o JSON)
+│   ├── errorHandler.js         # Manejo global de errores (HTML o JSON)
+│   └── registrarAcceso.js      # Log de accesos en logs/log.txt
 │
 ├── models/
-│   ├── adopciones.js         # Queries SQL adopciones
-│   ├── mascotas.js           # Queries SQL mascotas (paginación, joins)
-│   └── usuario.js            # Queries SQL usuarios
+│   ├── adopciones.js           # Queries SQL adopciones
+│   ├── mascotas.js             # Queries SQL mascotas (paginación, joins)
+│   └── usuario.js              # Queries SQL usuarios
 │
 ├── routes/
-│   ├── adopciones.js         # POST / y GET / (JWT)
-│   ├── mascotas.js           # API REST mascotas (JWT)
-│   ├── pages.js              # Rutas de páginas (HTML) + catch-all 404
-│   └── usuario.js            # API REST usuarios
+│   ├── adopciones.js           # POST / y GET / (JWT)
+│   ├── mascotas.js             # API REST mascotas (JWT)
+│   ├── pages.js                # Rutas de páginas (HTML) + catch-all 404
+│   └── usuario.js              # API REST usuarios
 │
 ├── sql/
-│   └── init.sql              # Esquema PostgreSQL (usuarios, mascotas, adopciones)
+│   └── init.sql                # Esquema PostgreSQL (usuarios, mascotas, adopciones)
+│
+├── logs/
+│   └── log.txt                 # Registro de accesos (auto-generado, no commitear)
 │
 ├── utils/
 │   ├── AppError.js           # Clase error personalizada
