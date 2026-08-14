@@ -47,4 +47,14 @@ router.get('/crear-mascota', (req, res) => {
 router.get('/registro', (req, res) => { res.render('registro', { mostrarLogin: true }); });
 router.get('/login', (req, res) => { res.render('login', { mostrarRegistro: true }); });
 
+// ===== 404 - RUTA NO ENCONTRADA =====
+router.use((req, res) => {
+    res.status(404).render('error', {
+        statusCode: 404,
+        titulo: 'Página no encontrada',
+        mensaje: '!Oh no¡ Parece que nos hemos perdido.',
+        mostrarLogout: true
+    });
+});
+
 export default router;

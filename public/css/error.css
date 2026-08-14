@@ -1,0 +1,90 @@
+/* ===== ERROR PAGE ===== */
+
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+main {
+    flex: 1;
+    display: flex;
+}
+
+.error-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    gap: 0;
+}
+
+.error-texto {
+    text-align: center;
+}
+
+.error-card {
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+}
+
+.error-code {
+    font-size: 6rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 0;
+}
+
+.error-icon {
+    font-size: 2.5rem;
+    color: var(--tertiary);
+    margin: 8px 0;
+}
+
+.error-title {
+     font-size: 0.95rem;
+    color: var(--body);
+    margin-bottom: 12px;
+    line-height: 1.5;
+    
+}
+
+.error-message {
+   font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--headline);
+    margin-bottom: 8px;
+}
+
+.error-btn {
+    display: inline-block;
+    padding: 12px 28px;
+    font-size: 0.95rem;
+}
+
+.error-imagen {
+    width: 100%;
+    max-width: 470px;
+    align-self: flex-start;
+    margin-left: 12%;
+}
+
+.error-imagen img {
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 576px) {
+    .error-code {
+        font-size: 4rem;
+    }
+    .error-title {
+        font-size: 1.2rem;
+    }
+}
