@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
 
+// Payload mínimo a propósito (id, nombre, email): el token viaja firmado en cada request
+// y no debe cargar datos sensibles (ni clave ni datos personales).
 export function generarToken(usuario) {
     const payload = {
         id: usuario.id,
@@ -19,7 +21,6 @@ export function verificarToken(req, res, next) {
     try{
         const dataToken = jwt.verify(token, process.env.JWT_SECRET);
         req.usuario = dataToken;
-        //res.status(200).json({ status: "success", message: "Token válido" });
         next();
     } catch (e) {
         return res.status(401).json({ status: "error", message: "Token inválido" });

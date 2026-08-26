@@ -12,14 +12,6 @@ class adopcionesController {
             return next(new AppError('Se requiere mascota_id', 400));
         }
 
-        const mascota = await mascotasModel.getOne(mascota_id);
-        if (!mascota) return next(new AppError('Mascota no encontrada', 404));
-
-        const yaAdoptada = await adopcionesModel.getByMascota(mascota_id);
-        if (yaAdoptada) {
-            return next(new AppError('Esta mascota ya fue adoptada', 409));
-        }
-
         const data = await adopcionesModel.adoptar(req.usuario.id, mascota_id);
         res.status(201).json({ status: 'ok', message: 'Adopción registrada', adopcion: data });
     });
