@@ -12,6 +12,9 @@ class mascotasModelo {
     }
 
     async update(id, mascota) {
+        // SQL dinámico: las keys del body se interpolan como nombre de columna.
+        // Riesgo: un cliente autenticado podría intentar sobrescribir usuario_id.
+        // Pendiente: whitelist de campos permitidos.
         const fields = [];
         const values = [];
         let i = 1;
@@ -37,6 +40,8 @@ class mascotasModelo {
     }
 
     async getAll() {
+        // LEFT JOIN: las mascotas sin adopción salen igual (fecha_adopcion = NULL);
+        // la vista decide si muestra el badge. Un JOIN interno las ocultaría.
         const result = await pool.query(
             `SELECT m.*, a.fecha_adopcion, u.nombre AS adoptante_nombre
                 FROM mascotas m

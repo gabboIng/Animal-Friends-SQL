@@ -10,7 +10,7 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 
 - **CRUD completo** de mascotas (Crear, Leer, Editar, Eliminar)
 - **Autenticación JWT** con registro e inicio de sesión (contraseñas con bcrypt)
-- **Registro de adopciones**: cada mascota puede ser adoptada una sola vez; la fecha de adopción y el nombre del adoptante se muestran en las cards
+- **Registro de adopciones transaccional**: cada mascota puede ser adoptada una sola vez; la operación se protege con transacciones PostgreSQL (`BEGIN` / `SELECT FOR UPDATE` / `COMMIT`) y la fecha de adopción y el nombre del adoptante se muestran en las cards
 - **Paginación** del catálogo de mascotas sin recargar la página
 - **Subida de imágenes** con conversión automática a WebP (Sharp)
 - **Página de error personalizada** (404/500) con imagen y sticky footer
@@ -238,6 +238,58 @@ Cada petición recibida se registra en `logs/log.txt` mediante el middleware `mi
 ```
 
 **Justificación de la decisión:** se optó por registrar **todas** las rutas (no solo una) mediante un middleware global, porque permite auditar el uso real de la aplicación sin duplicar lógica en cada ruta. El formato es una sola línea por evento para facilitar la lectura y el procesamiento posterior. La carpeta `logs/` está ignorada por Git, por lo que los accesos generados localmente no se suben al repositorio.
+
+---
+
+## Transacciones: registro seguro de adopciones
+
+### El problema
+
+Registrar una adopción requiere verificar que la mascota no esté adoptada y luego insertar el registro. Si esas dos operaciones se ejecutan con consultas independientes, existe una **condición de carrera**: dos usuarios podrían adoptar la misma mascota al mismo tiempo, pasar ambos la verificación y generar registros duplicados (el `UNIQUE(mascota_id)` lo impediría, pero con un error 500 en lugar de un 409 controlado).
+
+### La solución
+
+El modelo `models/adopciones.js` ejecuta toda la operación dentro de una **transacción** sobre un cliente dedicado del pool (`pool.connect()`, no `pool.query()`):
+
+1. `BEGIN` — inicia la transacción.
+2. `SELECT ... FROM mascotas WHERE id = $1 FOR UPDATE` — localiza la mascota y **bloquea su fila** hasta COMMIT/ROLLBACK. Cualquier otra transacción que intente adoptar la misma mascota queda en espera.
+3. Verificación atómica — si la mascota no existe → 404; si ya tiene adopción → 409. Al estar la fila bloqueada, no hay ventana entre "verificar" e "insertar".
+4. `INSERT INTO adopciones` — registra la adopción.
+5. `COMMIT` — confirma todo; o `ROLLBACK` en caso de error, dejando la BD exactamente como estaba.
+6. `finally { client.release() }` — devuelve el cliente al pool pase lo que pase (evita fugas de conexiones).
+
+### Diagrama de secuencia
+
+```mermaid
+sequenceDiagram
+    participant App as Aplicación
+    participant DB as PostgreSQL
+
+    App->>DB: BEGIN
+    App->>DB: SELECT FROM mascotas FOR UPDATE
+    alt mascota no existe
+        App->>DB: ROLLBACK
+    else ya adoptada
+        App->>DB: ROLLBACK
+    else disponible
+        App->>DB: INSERT INTO adopciones
+        App->>DB: COMMIT
+    end
+```
+
+### Verificación
+
+Probado con Postman sobre `POST /adopciones` (requiere JWT):
+
+| Envío | Resultado | Efecto en la BD |
+|-------|-----------|-----------------|
+| 1ª vez, mascota disponible | **201 Created** + adopción registrada | Nueva fila en `adopciones` |
+| 2ª vez, misma mascota | **409 Conflict** + "Esta mascota ya fue adoptada" | Ninguno (ROLLBACK) |
+| `mascota_id` inexistente | **404 Not Found** + "Mascota no encontrada" | Ninguno (ROLLBACK) |
+
+**Justificación de la decisión:** se optó por un diseño **normalizado**: el estado "adoptada" no se guarda en una columna de `mascotas`, sino que se deduce de la existencia de la fila en `adopciones` (una sola fuente de verdad). El `UNIQUE(mascota_id)` actúa como segunda capa de respaldo ante concurrencia extrema. Si en el futuro se necesita anular adopciones, la recomendación es agregar una columna de estado en `adopciones` (en lugar de borrar filas) para preservar el historial.
+
+---
 
 ## Estructura del Proyecto
 
