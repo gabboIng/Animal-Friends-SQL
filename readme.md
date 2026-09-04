@@ -221,11 +221,10 @@ flowchart LR
 6. **Iniciar el servidor**
    ```bash
    # modo desarrollo (con auto-reinicio vía nodemon):
-   npm run dev
+   pnpm run dev
    # o producción:
-   npm start
+   pnpm start
    ```
-   > Si usas `pnpm`, los mismos scripts funcionan con `pnpm run dev` / `pnpm start`.
 
 7. **Abrir en el navegador**
    ```
@@ -263,33 +262,6 @@ El modelo `models/adopciones.js` ejecuta toda la operación dentro de una **tran
 3. Verificación atómica — si la mascota no existe → 404; si ya tiene adopción → 409. Al estar la fila bloqueada, no hay ventana entre "verificar" e "insertar".
 4. `Adopcion.create({...}, { transaction: t })` — registra la adopción dentro de la misma transacción.
 
-```js
-async adoptar(usuario_id, mascota_id) {
-    return await sequelize.transaction(async (t) => {
-        const mascota = await Mascota.findByPk(mascota_id, {
-            transaction: t,
-            lock: true // SELECT ... FOR UPDATE
-        });
-        if (!mascota) {
-            throw new AppError('Mascota no encontrada', 404);
-        }
-
-        const yaAdoptada = await Adopcion.findOne({
-            where: { mascota_id },
-            transaction: t
-        });
-        if (yaAdoptada) {
-            throw new AppError('Esta mascota ya fue adoptada', 409);
-        }
-
-        return await Adopcion.create(
-            { usuario_id, mascota_id },
-            { transaction: t }
-        );
-        // COMMIT automático al salir; ROLLBACK automático si algo lanza
-    });
-}
-```
 
 ### Diagrama de secuencia
 
