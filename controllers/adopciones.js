@@ -1,5 +1,4 @@
 import adopcionesModel from '../models/adopciones.js';
-import mascotasModel from '../models/mascotas.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import { AppError } from '../utils/AppError.js';
 

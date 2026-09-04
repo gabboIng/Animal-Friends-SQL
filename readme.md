@@ -10,7 +10,7 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 
 - **CRUD completo** de mascotas (Crear, Leer, Editar, Eliminar)
 - **Autenticación JWT** con registro e inicio de sesión (contraseñas con bcrypt)
-- **Registro de adopciones transaccional**: cada mascota puede ser adoptada una sola vez; la operación se protege con transacciones PostgreSQL (`BEGIN` / `SELECT FOR UPDATE` / `COMMIT`) y la fecha de adopción y el nombre del adoptante se muestran en las cards
+- **Registro de adopciones transaccional**: cada mascota puede ser adoptada una sola vez; la operación se protege con transacciones de Sequelize (`sequelize.transaction()` + `lock: true`) y la fecha de adopción y el nombre del adoptante se muestran en las cards
 - **Paginación** del catálogo de mascotas sin recargar la página
 - **Subida de imágenes** con conversión automática a WebP (Sharp)
 - **Página de error personalizada** (404/500) con imagen y sticky footer
@@ -25,7 +25,7 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 | Categoría | Tecnología |
 |-----------|------------|
 | Backend | Express.js 5, Node.js |
-| Base de datos | PostgreSQL (pg, Pool) |
+| Base de datos | PostgreSQL, Sequelize (ORM) + sequelize-cli |
 | Motor de plantillas | Handlebars (hbs) |
 | Autenticación | JWT (jsonwebtoken), bcrypt |
 | Subida de imágenes | Multer, Sharp |
@@ -39,13 +39,13 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 
 El proyecto sigue el patrón **MVC** (Modelo-Vista-Controlador):
 
-- **Models**: consultas SQL parametrizadas sobre PostgreSQL (`mascotas`, `usuario`, `adopciones`).
+- **Models**: ORM **Sequelize** (`models/orm/`) más una capa de repositorio (`models/mascotas.js`, `models/usuario.js`, `models/adopciones.js`) que expone las consultas con la forma exacta que esperan las vistas.
 - **Controllers**: lógica de negocio (validaciones, procesamiento de imágenes, respuestas HTTP).
 - **Views**: plantillas Handlebars renderizadas en el servidor (`home`, `login`, `registro`, `crear-mascota`, `error`) con partials compartidos (`header`, `footer`).
 - **Routes**: separación entre páginas HTML y API REST.
 - **Middlewares**: autenticación JWT, registro de accesos en archivos planos y manejo global de errores.
 - **Utils**: `AppError` (errores operacionales) y `catchAsync` (wrapper async/await).
-- **Config**: conexión a PostgreSQL (`dbClient`), carga de archivos (`multer`) y procesamiento de imágenes (`procesarImagen`).
+- **Config**: conexión a PostgreSQL con Sequelize (`dbClient`), configuración de sequelize-cli (`config.cjs`), carga de archivos (`multer`) y procesamiento de imágenes (`procesarImagen`).
 
 ---
 
@@ -136,7 +136,7 @@ erDiagram
     MASCOTAS ||--o| ADOPCIONES : "es adoptada"
 ```
 
-El esquema completo se encuentra en `sql/init.sql`.
+El esquema completo está versionado en las migraciones de Sequelize (`migrations/`). El archivo `sql/init.sql` se conserva únicamente como referencia del esquema.
 
 ---
 
@@ -194,12 +194,11 @@ flowchart LR
    pnpm install
    ```
 
-3. **Crear la base de datos y las tablas**
+3. **Crear la base de datos**
 
-   En PostgreSQL, crear la base de datos y ejecutar el script:
+   En PostgreSQL, crear la base de datos:
    ```bash
    psql -U postgres -d postgres -c "CREATE DATABASE adopcion;"
-   psql -U postgres -d adopcion -f sql/init.sql
    ```
 
 4. **Configurar variables de entorno**
@@ -211,7 +210,15 @@ flowchart LR
    JWT_SECRET=tu_secreto_ultra_seguro
    ```
 
-5. **Iniciar el servidor**
+5. **Ejecutar las migraciones** (crea las tablas con Sequelize):
+
+   ```bash
+   pnpm run db:migrate
+   ```
+   > Las migraciones son idempotentes (`CREATE TABLE IF NOT EXISTS`), por lo que
+   > también se pueden ejecutar sobre una base de datos que ya tenga las tablas.
+
+6. **Iniciar el servidor**
    ```bash
    # modo desarrollo (con auto-reinicio vía nodemon):
    npm run dev
@@ -220,7 +227,7 @@ flowchart LR
    ```
    > Si usas `pnpm`, los mismos scripts funcionan con `pnpm run dev` / `pnpm start`.
 
-6. **Abrir en el navegador**
+7. **Abrir en el navegador**
    ```
    http://localhost:5100
    ```
@@ -249,14 +256,40 @@ Registrar una adopción requiere verificar que la mascota no esté adoptada y lu
 
 ### La solución
 
-El modelo `models/adopciones.js` ejecuta toda la operación dentro de una **transacción** sobre un cliente dedicado del pool (`pool.connect()`, no `pool.query()`):
+El modelo `models/adopciones.js` ejecuta toda la operación dentro de una **transacción** de Sequelize (`sequelize.transaction()`), que gestiona internamente el cliente dedicado:
 
-1. `BEGIN` — inicia la transacción.
-2. `SELECT ... FROM mascotas WHERE id = $1 FOR UPDATE` — localiza la mascota y **bloquea su fila** hasta COMMIT/ROLLBACK. Cualquier otra transacción que intente adoptar la misma mascota queda en espera.
+1. `sequelize.transaction(async (t) => {...})` — abre la transacción; hace **COMMIT automático** al retornar el callback y **ROLLBACK** si este lanza un error. No hay que manejar `BEGIN`/`COMMIT`/`ROLLBACK` ni liberar el cliente a mano.
+2. `Mascota.findByPk(id, { transaction: t, lock: true })` — localiza la mascota y la **bloquea** (`SELECT ... FOR UPDATE`). Cualquier otra transacción que intente adoptar la misma mascota queda en espera.
 3. Verificación atómica — si la mascota no existe → 404; si ya tiene adopción → 409. Al estar la fila bloqueada, no hay ventana entre "verificar" e "insertar".
-4. `INSERT INTO adopciones` — registra la adopción.
-5. `COMMIT` — confirma todo; o `ROLLBACK` en caso de error, dejando la BD exactamente como estaba.
-6. `finally { client.release() }` — devuelve el cliente al pool pase lo que pase (evita fugas de conexiones).
+4. `Adopcion.create({...}, { transaction: t })` — registra la adopción dentro de la misma transacción.
+
+```js
+async adoptar(usuario_id, mascota_id) {
+    return await sequelize.transaction(async (t) => {
+        const mascota = await Mascota.findByPk(mascota_id, {
+            transaction: t,
+            lock: true // SELECT ... FOR UPDATE
+        });
+        if (!mascota) {
+            throw new AppError('Mascota no encontrada', 404);
+        }
+
+        const yaAdoptada = await Adopcion.findOne({
+            where: { mascota_id },
+            transaction: t
+        });
+        if (yaAdoptada) {
+            throw new AppError('Esta mascota ya fue adoptada', 409);
+        }
+
+        return await Adopcion.create(
+            { usuario_id, mascota_id },
+            { transaction: t }
+        );
+        // COMMIT automático al salir; ROLLBACK automático si algo lanza
+    });
+}
+```
 
 ### Diagrama de secuencia
 
@@ -301,7 +334,8 @@ Animal-Friends-SQL/
 ├── package.json
 │
 ├── config/
-│   ├── dbClient.js             # Conexión PostgreSQL (pg Pool)
+│   ├── dbClient.js             # Conexión PostgreSQL (instancia Sequelize)
+│   ├── config.cjs              # Configuración de sequelize-cli (migraciones)
 │   ├── multer.js               # Config subida de archivos (máx. 10 MB)
 │   └── procesarImagen.js       # Conversión de imágenes → WebP (Sharp)
 │
@@ -318,9 +352,14 @@ Animal-Friends-SQL/
 │   └── registrarAcceso.js      # Log de accesos en logs/log.txt
 │
 ├── models/
-│   ├── adopciones.js           # Queries SQL adopciones
-│   ├── mascotas.js             # Queries SQL mascotas (paginación, joins)
-│   └── usuario.js              # Queries SQL usuarios
+│   ├── orm/
+│   │   ├── index.js            # Modelos Sequelize + asociaciones
+│   │   ├── usuario.js          # Modelo Sequelize: usuarios
+│   │   ├── mascota.js          # Modelo Sequelize: mascotas
+│   │   └── adopcion.js         # Modelo Sequelize: adopciones
+│   ├── adopciones.js           # Repositorio adopciones (transacción, joins)
+│   ├── mascotas.js             # Repositorio mascotas (paginación, joins)
+│   └── usuario.js              # Repositorio usuarios
 │
 ├── routes/
 │   ├── adopciones.js           # POST / y GET / (JWT)
@@ -328,8 +367,11 @@ Animal-Friends-SQL/
 │   ├── pages.js                # Rutas de páginas (HTML) + catch-all 404
 │   └── usuario.js              # API REST usuarios
 │
+├── migrations/
+│   └── create-tables.cjs        # Migración inicial: usuarios, mascotas y adopciones (idempotente)
+│
 ├── sql/
-│   └── init.sql                # Esquema PostgreSQL (usuarios, mascotas, adopciones)
+│   └── init.sql                # Esquema PostgreSQL (referencia; las tablas se crean con migraciones)
 │
 ├── logs/
 │   └── log.txt                 # Registro de accesos (auto-generado, no commitear)

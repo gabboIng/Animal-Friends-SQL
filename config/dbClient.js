@@ -1,14 +1,18 @@
-import pg from 'pg';
-const { Pool } = pg;
+import { Sequelize } from 'sequelize';
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    logging: false,
+    define: {
+        underscored: true,
+        timestamps: true
+    }
 });
 
 // Health-check al arranque: si la BD no responde, fallamos temprano (y logueamos)
 // en vez de descubrirlo a media aplicación.
-pool.query('SELECT NOW()')
+sequelize.authenticate()
     .then(() => console.log('Conexión a PostgreSQL establecida'))
     .catch(err => console.error('Error al conectar a PostgreSQL', err));
 
-export default pool;
+export default sequelize;
