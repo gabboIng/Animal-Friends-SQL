@@ -52,9 +52,10 @@ try {
   console.error('Error al levantar servidor :', e);
 }
 
-// Cierre explícito del pool de Postgres en Ctrl+C (desarrollo): sin esto el proceso queda colgado.
+// Cierre explícito de la conexión de PostgreSQL en Ctrl+C (desarrollo):
+// sin esto el proceso queda colgado.
 process.on('SIGINT', async () => {
   console.log('Cerrando la aplicación...');
-  await dbClient.end();
+  await dbClient.close();
   process.exit(0);
 });
