@@ -48,6 +48,8 @@ router.get('/registro', (req, res) => { res.render('registro', { mostrarLogin: t
 router.get('/login', (req, res) => { res.render('login', { mostrarRegistro: true }); });
 
 // ===== 404 - RUTA NO ENCONTRADA =====
+// Debe ser el ÚLTIMO middleware del router: si se montara antes,
+// interceptaría rutas válidas. Express lo alcanza solo si nada respondió.
 router.use((req, res) => {
     res.status(404).render('error', {
         statusCode: 404,

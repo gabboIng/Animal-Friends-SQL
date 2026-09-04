@@ -1,31 +1,52 @@
-import pool from '../config/dbClient.js';
+import sequelize from '../config/dbClient.js';
+import { Mascota, Adopcion, Usuario } from './orm/index.js';
+import { AppError } from '../utils/AppError.js';
 
 class adopcionesModelo {
     async adoptar(usuario_id, mascota_id) {
-        const result = await pool.query(
-            `INSERT INTO adopciones (usuario_id, mascota_id)
-             VALUES ($1, $2) RETURNING *`,
-            [usuario_id, mascota_id]
-        );
-        return result.rows[0];
+        return await sequelize.transaction(async (t) => {
+            // Bloquea la fila de la mascota hasta COMMIT/ROLLBACK (SELECT ... FOR UPDATE)
+            const mascota = await Mascota.findByPk(mascota_id, {
+                transaction: t,
+                lock: t.LOCK.UPDATE
+            });
+            if (!mascota) {
+                throw new AppError('Mascota no encontrada', 404);
+            }
+
+            // Check atómico: ya no hay ventana entre "verificar" e "insertar"
+            const yaAdoptada = await Adopcion.findOne({
+                where: { mascota_id },
+                transaction: t
+            });
+            if (yaAdoptada) {
+                throw new AppError('Esta mascota ya fue adoptada', 409);
+            }
+
+            const result = await Adopcion.create(
+                { usuario_id, mascota_id },
+                { transaction: t }
+            );
+            return result.toJSON();
+        });
     }
 
     async getAdopciones() {
-        const result = await pool.query(`
-            SELECT a.*, m.nombre AS mascota_nombre, u.nombre AS usuario_nombre
-            FROM adopciones a
-            JOIN mascotas m ON a.mascota_id = m.id
-            JOIN usuarios u ON a.usuario_id = u.id
-            ORDER BY a.fecha_adopcion DESC
-        `);
-        return result.rows;
-    }
-
-    async getByMascota(mascota_id) {
-        const result = await pool.query(
-            'SELECT * FROM adopciones WHERE mascota_id = $1', [mascota_id]
-        );
-        return result.rows[0];
+        const rows = await Adopcion.findAll({
+            include: [
+                { model: Mascota, as: 'mascota', attributes: ['nombre'], required: true },
+                { model: Usuario, as: 'usuario', attributes: ['nombre'], required: true }
+            ],
+            order: [['fecha_adopcion', 'DESC']]
+        });
+        return rows.map((a) => {
+            const data = a.toJSON();
+            data.mascota_nombre = data.mascota?.nombre ?? null;
+            data.usuario_nombre = data.usuario?.nombre ?? null;
+            delete data.mascota;
+            delete data.usuario;
+            return data;
+        });
     }
 }
 

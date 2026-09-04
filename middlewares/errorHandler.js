@@ -2,6 +2,8 @@ export const globalErrorHandler = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
+    // Misma API para dos clientes: navegador → página HTML; fetch/curl → JSON.
+    // req.accepts('html') detecta el header Accept y decide.
     if (req.accepts('html')) {
         let titulo, mensaje;
         if (err.statusCode === 404) {
@@ -30,6 +32,8 @@ export const globalErrorHandler = (err, req, res, next) => {
         });
     }
 
+    // Nunca se filtra el mensaje real de un error interno al cliente;
+    // solo se loguea en consola para no exponer detalles del stack.
     console.error('ERROR INESPERADO', err);
     res.status(500).json({
         status: 'error',

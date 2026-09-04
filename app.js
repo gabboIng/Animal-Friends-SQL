@@ -31,12 +31,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Expone la carpeta uploads como estática para poder ver las imágenes en el navegador
 // (ej: http://localhost:5100/uploads/nombre-archivo.png)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Orden importa: el log va antes de las rutas para capturar TODA petición, incluidos los 404.
+// Todo middleware montado después de él queda fuera del registro.
 app.use(registrarAcceso);
 app.use('/mascotas', routesMascotas);
 app.use('/usuario', routesUsuario);
 app.use('/adopciones',routesAdopciones)
 app.use("/",routsPages);
 
+// El error handler SIEMPRE va al final: Express solo lo invoca si ninguna ruta anterior respondió.
+// Si se montara antes de las rutas, jamás se ejecutaría.
 app.use(globalErrorHandler);
 
 try {
@@ -48,8 +52,10 @@ try {
   console.error('Error al levantar servidor :', e);
 }
 
+// Cierre explícito de la conexión de PostgreSQL en Ctrl+C (desarrollo):
+// sin esto el proceso queda colgado.
 process.on('SIGINT', async () => {
   console.log('Cerrando la aplicación...');
-  await dbClient.end();
+  await dbClient.close();
   process.exit(0);
 });
