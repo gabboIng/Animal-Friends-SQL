@@ -12,6 +12,7 @@ import { globalErrorHandler } from './middlewares/errorHandler.js';
 import hbs from 'hbs';
 import routesAdopciones from './routes/adopciones.js'
 import registrarAcceso from './middlewares/registrarAcceso.js'
+import routesAdmin from './routes/admin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,6 +38,7 @@ app.use(registrarAcceso);
 app.use('/mascotas', routesMascotas);
 app.use('/usuario', routesUsuario);
 app.use('/adopciones',routesAdopciones)
+app.use('/admin', routesAdmin);
 app.use("/",routsPages);
 
 // El error handler SIEMPRE va al final: Express solo lo invoca si ninguna ruta anterior respondió.

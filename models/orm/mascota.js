@@ -39,6 +39,11 @@ const Mascota = sequelize.define('Mascota', {
             key: 'id'
         },
         onDelete: 'CASCADE'
+    },
+    activo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     tableName: 'mascotas',

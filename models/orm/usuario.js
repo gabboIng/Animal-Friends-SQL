@@ -27,6 +27,16 @@ const Usuario = sequelize.define('Usuario', {
     telefono: {
         type: DataTypes.DECIMAL,
         allowNull: true
+    },
+    rol: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'usuario'
+    },
+    activo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     tableName: 'usuarios',

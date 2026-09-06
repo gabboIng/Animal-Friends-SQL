@@ -1,7 +1,7 @@
 <nav class="navbar">
 
     <div class="navbar-contenedor">
-        <a href="/" class="marca"><i class="fa-solid fa-paw"></i> Animal Friends</a>
+        <a href="/home" class="marca"><i class="fa-solid fa-paw"></i> Animal Friends</a>
         <div class="navbar-links">
             {{#if mostrarLogin}}
                 <a href="/login">Iniciar Sesión</a>
@@ -10,8 +10,42 @@
                 <a href="/registro">Registrarse</a>
             {{/if}}
             {{#if mostrarLogout}}
-                <a href="/login">Cerrar sesión</a>
+                <a href="/admin" id="linkAdmin" hidden>Panel Admin</a>
+                <a href="/login" id="linkLogout">Cerrar sesión</a>
             {{/if}}
         </div>
     </div>
 </nav>
+<script>
+    // Muestra el enlace "Panel Admin" solo para cuentas con rol admin.
+    // Datos de sesión guardados en localStorage por login.js.
+    (function () {
+        try {
+            const u = JSON.parse(localStorage.getItem('usuario') || 'null');
+            const link = document.getElementById('linkAdmin');
+            if (link && u && u.rol === 'admin') link.hidden = false;
+        } catch (e) {}
+    })();
+
+    // Confirmación antes de cerrar sesión
+    document.getElementById('linkLogout')?.addEventListener('click', function (e) {
+        e.preventDefault();
+        const url = this.href;
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '¿Cerrar sesión?',
+                text: 'Se cerrará tu sesión actual.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b5d50',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, cerrar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) window.location.href = url;
+            });
+        } else {
+            window.location.href = url;
+        }
+    })();
+</script>
