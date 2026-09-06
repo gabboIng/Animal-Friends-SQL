@@ -20,7 +20,7 @@ class usuarioController {
         }
         const hash = await bcrypt.hash(clave, 10);
         const data = await usuariosModel.create({ nombre, apellido, email, clave: hash, telefono });
-        res.status(201).json({ status: "ok", message: "Usuario registrado exitosamente", usuario: data });
+        res.status(201).json({ status: "ok", message: "Usuario registrado exitosamente", usuario: { id: data.id, nombre: data.nombre, email: data.email, rol: data.rol } });
     });
 
     login = catchAsync(async (req, res, next) => {
@@ -37,7 +37,7 @@ class usuarioController {
             return next(new AppError('Contraseña incorrecta', 401));
         }
         const token = generarToken(usuario);
-        res.status(200).json({ status: "ok", message: "Login exitoso", token, usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email } });
+        res.status(200).json({ status: "ok", message: "Login exitoso", token, usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol } });
     });
 }
 

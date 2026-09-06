@@ -13,10 +13,13 @@ class adopcionesModelo {
             if (!mascota) {
                 throw new AppError('Mascota no encontrada', 404);
             }
+            if (!mascota.activo) {
+                throw new AppError('Esta mascota no está disponible', 410);
+            }
 
             // Check atómico: ya no hay ventana entre "verificar" e "insertar"
             const yaAdoptada = await Adopcion.findOne({
-                where: { mascota_id },
+                where: { mascota_id, activo: true },
                 transaction: t
             });
             if (yaAdoptada) {
@@ -31,10 +34,17 @@ class adopcionesModelo {
         });
     }
 
+    // Soft delete: desactiva la adopción en vez de borrarla
+    async softDelete(id) {
+        const [count] = await Adopcion.update({ activo: false }, { where: { id } });
+        return count > 0;
+    }
+
     async getAdopciones() {
         const rows = await Adopcion.findAll({
+            where: { activo: true },
             include: [
-                { model: Mascota, as: 'mascota', attributes: ['nombre'], required: true },
+                { model: Mascota, as: 'mascota', attributes: ['nombre'], required: true, where: { activo: true } },
                 { model: Usuario, as: 'usuario', attributes: ['nombre'], required: true }
             ],
             order: [['fecha_adopcion', 'DESC']]

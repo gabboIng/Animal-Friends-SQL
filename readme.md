@@ -296,6 +296,70 @@ Probado con Postman sobre `POST /adopciones` (requiere JWT):
 
 ---
 
+## Roles de usuario y panel de administración
+
+Cada cuenta tiene una columna `rol` (`'usuario'` o `'admin'`). Las rutas `/admin` solo responden a tokens cuyo `rol` sea `admin` (middleware `esAdmin` que devuelve **403** en caso contrario). El JWT incluye el `rol` en el payload, por lo que **cambiar el rol de una cuenta exige volver a iniciar sesión**.
+
+### Cuenta semilla
+
+La migración `g-agregar-rol-usuarios.cjs` crea de forma idempotente la primera cuenta administradora:
+
+| Email | Contraseña | Rol |
+|-------|------------|-----|
+| `admin@admin` | `admin` | `admin` |
+
+Para otorgar el rol a otra cuenta (p. ej. `gabriieller@gmail.com`) o revocarlo:
+
+```sql
+UPDATE usuarios SET rol = 'admin'    WHERE email = 'gabriieller@gmail.com';
+UPDATE usuarios SET rol = 'usuario'  WHERE email = 'gabriieller@gmail.com';
+```
+
+### Panel `/admin`
+
+- `GET /admin` — vista: tabla con **Avatar, Nombre, Contacto, Rol, Mascotas publicadas, Mascotas adoptadas, Registro y Acciones** (ver, editar, eliminar).
+- El enlace **"Panel Admin"** del navbar solo aparece para cuentas con `rol: 'admin'` (se envía al login si falta el rol).
+- Un administrador **no puede eliminar su propia cuenta** (se devuelve 400) para evitar dejar el sistema sin admin.
+
+### Soft Delete (eliminación lógica)
+
+Para preservar la integridad referencial y el historial de datos, el sistema utiliza **soft delete** en lugar de borrado físico:
+
+- **`mascotas`** y **`adopciones`** tienen una columna `activo` (BOOLEAN, default `TRUE`).
+- Al eliminar un usuario, el sistema **desactiva** sus mascotas y adopciones (`activo = false`) en vez de borrarlas.
+- Los queries de listado filtran solo registros con `activo = true`, por lo que los datos desactivados no aparecen en la interfaz.
+- La eliminación se realiza dentro de una **transacción** para garantizar atomicidad.
+
+**Flujo de eliminación:**
+
+```
+Admin hace clic en "Eliminar usuario"
+         │
+         ▼
+¿Tiene adopciones gestionadas
+ por OTROS usuarios?
+         │
+    ┌────┴────┐
+    SÍ        NO
+    │         │
+    ▼         ▼
+ BLOQUEADO   PROCESO AUTOMÁTICO:
+ (409)       1. Desactivar mascotas del usuario
+             2. Desactivar adopciones del usuario
+             3. Desactivar adopciones de sus mascotas
+             4. Eliminar el usuario del sistema
+```
+
+**Ejemplo:**
+
+| Escenario | Resultado |
+|-----------|-----------|
+| Usuario A publicó mascotas que **nadie adoptó** | ✅ Se desactivan las mascotas y se elimina al usuario |
+| Usuario A publicó mascotas que **otros adoptaron** | ❌ Bloqueado: "No se puede eliminar porque tiene adopciones gestionadas por otros usuarios" |
+| Usuario que **solo adoptó** (no publicó) | ✅ Se desactivan sus adopciones, las mascotas de otros quedan intactas |
+
+---
+
 ## Estructura del Proyecto
 
 ```
@@ -313,6 +377,7 @@ Animal-Friends-SQL/
 │
 ├── controllers/
 │   ├── adopciones.js           # Adoptar mascota + listar adopciones
+│   ├── admin.js                # Panel de administración (roles)
 │   ├── mascotas.js             # CRUD mascotas
 │   └── usuario.js              # Registro + Login
 │
@@ -321,6 +386,7 @@ Animal-Friends-SQL/
 │
 ├── middlewares/
 │   ├── errorHandler.js         # Manejo global de errores (HTML o JSON)
+│   ├── esAdmin.js              # Restringe rutas a usuarios con rol 'admin' (403)
 │   └── registrarAcceso.js      # Log de accesos en logs/log.txt
 │
 ├── models/
@@ -335,12 +401,15 @@ Animal-Friends-SQL/
 │
 ├── routes/
 │   ├── adopciones.js           # POST / y GET / (JWT)
+│   ├── admin.js                # Vista y API del panel de administración (JWT + rol)
 │   ├── mascotas.js             # API REST mascotas (JWT)
 │   ├── pages.js                # Rutas de páginas (HTML) + catch-all 404
 │   └── usuario.js              # API REST usuarios
 │
 ├── migrations/
-│   └── create-tables.cjs        # Migración inicial: usuarios, mascotas y adopciones (idempotente)
+│   ├── create-tables.cjs        # Migración inicial: usuarios, mascotas y adopciones (idempotente)
+│   ├── g-agregar-rol-usuarios.cjs  # Agrega columna rol + usuario semilla admin (idempotente)
+│   └── h-agregar-activo-soft-delete.cjs  # Agrega columna activo para soft delete (idempotente)
 │
 ├── sql/
 │   └── init.sql                # Esquema PostgreSQL (referencia; las tablas se crean con migraciones)
@@ -353,9 +422,9 @@ Animal-Friends-SQL/
 │   └── catchAsync.js         # Wrapper async/await
 │
 ├── public/
-│   ├── css/                  # shared, home, login, registro, crear-mascota, error
+│   ├── css/                  # shared, home, login, registro, crear-mascota, admin-usuarios, error
 │   ├── img/                  # Imágenes estáticas
-│   └── js/                   # paginador, login, registro, crear-mascota
+│   └── js/                   # paginador, login, registro, crear-mascota, admin
 │
 ├── uploads/                  # Imágenes subidas (no commitear)
 │
@@ -364,6 +433,7 @@ Animal-Friends-SQL/
     ├── login.hbs             # Inicio de sesión
     ├── registro.hbs          # Registro de usuario
     ├── crear-mascota.hbs     # Formulario crear mascota
+    ├── admin-usuarios.hbs    # Panel de administración (lista de usuarios)
     ├── error.hbs             # Página de error (404/500)
     └── partials/
         ├── header.hbs        # Navbar (links condicionales)
@@ -383,6 +453,7 @@ Animal-Friends-SQL/
 | `GET` | `/login` | Página de inicio de sesión |
 | `GET` | `/registro` | Página de registro |
 | `GET` | `/crear-mascota` | Formulario para crear mascota |
+| `GET` | `/admin` | Panel de administración: usuarios, mascotas publicadas y adoptadas (requiere rol admin) |
 | `GET` | `*` | Página de error 404 (catch-all) |
 
 ### Mascotas (API REST) — requiere JWT
@@ -406,7 +477,16 @@ Animal-Friends-SQL/
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `POST` | `/usuario/registrar` | Registrar usuario |
-| `POST` | `/usuario/login` | Iniciar sesión (devuelve JWT) |
+| `POST` | `/usuario/login` | Iniciar sesión (devuelve JWT con `rol`) |
+
+### Administración (API REST) — requiere JWT + rol `admin`
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/admin/api/usuarios` | Listar usuarios (sin clave) con mascotas publicadas y adoptadas |
+| `GET` | `/admin/api/usuarios/:id` | Obtener detalle de un usuario con sus listas |
+| `PUT` | `/admin/api/usuarios/:id` | Editar nombre, apellido, email, teléfono y rol |
+| `DELETE` | `/admin/api/usuarios/:id` | Eliminar usuario (soft delete: desactiva mascotas y adopciones) |
 
 ### Adopciones (API REST)
 

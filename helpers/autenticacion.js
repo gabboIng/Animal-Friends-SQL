@@ -1,12 +1,13 @@
 import jwt from 'jsonwebtoken';
 
-// Payload mínimo a propósito (id, nombre, email): el token viaja firmado en cada request
+// Payload mínimo a propósito (id, nombre, email, rol): el token viaja firmado en cada request
 // y no debe cargar datos sensibles (ni clave ni datos personales).
 export function generarToken(usuario) {
     const payload = {
         id: usuario.id,
         nombre: usuario.nombre,
-        email: usuario.email
+        email: usuario.email,
+        rol: usuario.rol
     };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
     return token;

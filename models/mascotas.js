@@ -1,7 +1,7 @@
 import { Mascota, Adopcion, Usuario } from './orm/index.js';
 
 const INCLUDE_ADOPCION_USUARIO = [
-    { model: Adopcion, as: 'adopcion', attributes: ['fecha_adopcion'], required: false },
+    { model: Adopcion, as: 'adopcion', attributes: ['fecha_adopcion'], required: false, where: { activo: true } },
     { model: Usuario, as: 'usuario', attributes: ['nombre'], required: false }
 ];
 
@@ -35,8 +35,15 @@ class mascotasModelo {
         return { id };
     }
 
+    // Soft delete: desactiva la mascota en vez de borrarla
+    async softDelete(id) {
+        const [count] = await Mascota.update({ activo: false }, { where: { id } });
+        return count > 0;
+    }
+
     async getAll() {
         const rows = await Mascota.findAll({
+            where: { activo: true },
             include: INCLUDE_ADOPCION_USUARIO,
             order: [['createdAt', 'DESC']]
         });
@@ -46,6 +53,7 @@ class mascotasModelo {
     async getPaginated(page = 1, limit = 6) {
         const offset = (page - 1) * limit;
         const rows = await Mascota.findAll({
+            where: { activo: true },
             include: INCLUDE_ADOPCION_USUARIO,
             order: [['createdAt', 'DESC']],
             limit,
@@ -55,11 +63,14 @@ class mascotasModelo {
     }
 
     async countTotal() {
-        return Mascota.count();
+        return Mascota.count({ where: { activo: true } });
     }
 
     async getOne(id) {
-        const mascota = await Mascota.findByPk(id, { include: INCLUDE_ADOPCION_USUARIO });
+        const mascota = await Mascota.findByPk(id, {
+            where: { activo: true },
+            include: INCLUDE_ADOPCION_USUARIO
+        });
         return mascota ? aplanar(mascota) : null;
     }
 }
