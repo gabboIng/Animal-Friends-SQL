@@ -6,7 +6,8 @@ class adminController {
     constructor() {}
 
     listarUsuarios = catchAsync(async (req, res, next) => {
-        const data = await usuariosModel.getAllConAdopcionesPublicadas();
+        const { nombre, email, rol } = req.query;
+        const data = await usuariosModel.getAllConAdopcionesPublicadas({ nombre, email, rol });
         res.status(200).json({ status: 'ok', data });
     });
 

@@ -1,4 +1,6 @@
+import { Op } from 'sequelize';
 import { Usuario, Adopcion, Mascota } from './orm/index.js';
+import { registrarTransaccionFallida } from '../utils/loggerTransaccion.js';
 
 class usuariosModelo {
     async create(usuario) {
@@ -11,10 +13,22 @@ class usuariosModelo {
         return result ? result.toJSON() : null;
     }
 
-    // Lista todos los usuarios activos (sin clave) con sus mascotas publicadas y adoptadas
-    async getAllConAdopcionesPublicadas() {
+    // Lista todos los usuarios activos (sin clave) con sus mascotas publicadas y adoptadas.
+    // Acepta filtros opcionales por nombre/apellido, email y rol (?nombre=&email=&rol=).
+    async getAllConAdopcionesPublicadas({ nombre = '', email = '', rol = '' } = {}) {
+        const where = { activo: true };
+
+        if (rol) where.rol = rol;
+        if (email) where.email = { [Op.iLike]: `%${email}%` };
+        if (nombre) {
+            where[Op.or] = [
+                { nombre: { [Op.iLike]: `%${nombre}%` } },
+                { apellido: { [Op.iLike]: `%${nombre}%` } }
+            ];
+        }
+
         const rows = await Usuario.findAll({
-            where: { activo: true },
+            where,
             attributes: { exclude: ['clave'] },
             include: [
                 {
@@ -122,42 +136,47 @@ class usuariosModelo {
     // Soft delete: desactiva el usuario y todos sus datos
     async softDeleteById(usuarioId) {
         const { sequelize } = Mascota;
-        return await sequelize.transaction(async (t) => {
-            // Desactivar mascotas del usuario
-            await Mascota.update(
-                { activo: false },
-                { where: { usuario_id: usuarioId }, transaction: t }
-            );
+        try {
+            return await sequelize.transaction(async (t) => {
+                // Desactivar mascotas del usuario
+                await Mascota.update(
+                    { activo: false },
+                    { where: { usuario_id: usuarioId }, transaction: t }
+                );
 
-            // Desactivar adopciones donde el usuario es adoptante
-            await Adopcion.update(
-                { activo: false },
-                { where: { usuario_id: usuarioId }, transaction: t }
-            );
-
-            // Desactivar adopciones de mascotas del usuario (otros usuarios que adoptaron)
-            // Primero obtener los IDs de las mascotas del usuario
-            const mascotaIds = await Mascota.findAll({
-                where: { usuario_id: usuarioId },
-                attributes: ['id'],
-                transaction: t
-            }).then((rows) => rows.map((r) => r.id));
-
-            if (mascotaIds.length > 0) {
+                // Desactivar adopciones donde el usuario es adoptante
                 await Adopcion.update(
                     { activo: false },
-                    { where: { mascota_id: mascotaIds }, transaction: t }
+                    { where: { usuario_id: usuarioId }, transaction: t }
                 );
-            }
 
-            // Desactivar el usuario
-            await Usuario.update(
-                { activo: false },
-                { where: { id: usuarioId }, transaction: t }
-            );
+                // Desactivar adopciones de mascotas del usuario (otros usuarios que adoptaron)
+                // Primero obtener los IDs de las mascotas del usuario
+                const mascotaIds = await Mascota.findAll({
+                    where: { usuario_id: usuarioId },
+                    attributes: ['id'],
+                    transaction: t
+                }).then((rows) => rows.map((r) => r.id));
 
-            return { id: usuarioId };
-        });
+                if (mascotaIds.length > 0) {
+                    await Adopcion.update(
+                        { activo: false },
+                        { where: { mascota_id: mascotaIds }, transaction: t }
+                    );
+                }
+
+                // Desactivar el usuario
+                await Usuario.update(
+                    { activo: false },
+                    { where: { id: usuarioId }, transaction: t }
+                );
+
+                return { id: usuarioId };
+            });
+        } catch (error) {
+            registrarTransaccionFallida(`softDeleteById (usuario ${usuarioId})`, error);
+            throw error;
+        }
     }
 
     // Actualiza un usuario por ID
