@@ -10,11 +10,14 @@ Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios 
 
 - **CRUD completo** de mascotas (Crear, Leer, Editar, Eliminar)
 - **Autenticación JWT** con registro e inicio de sesión (contraseñas con bcrypt)
+- **Roles y panel de administración**: columna `rol` (`usuario`/`admin`), rutas `/admin` protegidas por el middleware `esAdmin`, con filtros de búsqueda por nombre, email y rol
+- **Soft delete con validación**: al eliminar un usuario se desactivan (no se borran) sus datos y se bloquea el borrado si tiene adopciones gestionadas por otros (409)
 - **Registro de adopciones transaccional**: cada mascota puede ser adoptada una sola vez; la operación se protege con transacciones de Sequelize (`sequelize.transaction()` + `lock: true`) y la fecha de adopción y el nombre del adoptante se muestran en las cards
 - **Paginación** del catálogo de mascotas sin recargar la página
 - **Subida de imágenes** con conversión automática a WebP (Sharp)
 - **Página de error personalizada** (404/500) con imagen y sticky footer
 - **Registro de accesos en archivos planos** (`logs/log.txt`) con fecha, hora y ruta accedida
+- **Log de transacciones fallidas** (`logs/transacciones-fallidas.log`): operaciones que terminaron en ROLLBACK, con operación y motivo
 - **Diseño responsivo** con Bootstrap 5
 - **Alertas interactivas** con SweetAlert2
 
@@ -137,6 +140,51 @@ erDiagram
 ```
 
 El esquema completo está versionado en las migraciones de Sequelize (`migrations/`). El archivo `sql/init.sql` se conserva únicamente como referencia del esquema.
+
+### SQL manual vs ORM (Módulo 7)
+
+El mismo resultado —**un usuario con sus mascotas publicadas y adoptadas**— se puede obtener de dos formas:
+
+**Versión SQL manual** (query crudo, el mismo espíritu de `sql/init.sql`):
+
+```sql
+SELECT
+    u.id, u.nombre, u.apellido, u.email,
+    (SELECT json_agg(json_build_object('id', m.id, 'nombre', m.nombre))
+        FROM mascotas m
+        WHERE m.usuario_id = u.id AND m.activo = TRUE) AS mascotas_publicadas,
+    (SELECT json_agg(json_build_object('id', a.id, 'nombre', ma.nombre))
+        FROM adopciones a
+        JOIN mascotas ma ON ma.id = a.mascota_id AND ma.activo = TRUE
+        WHERE a.usuario_id = u.id AND a.activo = TRUE) AS mascotas_adoptadas
+FROM usuarios u
+WHERE u.activo = TRUE
+ORDER BY u.created_at DESC;
+```
+
+**Versión equivalente con Sequelize** (`models/usuario.js` → `getAllConAdopcionesPublicadas`):
+
+```js
+const rows = await Usuario.findAll({
+    where: { activo: true },
+    attributes: { exclude: ['clave'] },
+    include: [
+        { model: Mascota, as: 'mascotas', required: false, where: { activo: true } },
+        { model: Adopcion, as: 'adopciones', required: false, where: { activo: true },
+          include: [{ model: Mascota, as: 'mascota', where: { activo: true } }] }
+    ],
+    order: [['createdAt', 'DESC']]
+});
+```
+
+| Aspecto | SQL manual | Sequalize (ORM) |
+|---------|-----------|----------------------|
+| Legibilidad | Alto SQL anidado (`json_agg`) difícil de mantener | Consultas encadenadas con `include` |
+| Riesgo de error | Posible al escribir JOINs a mano | Relaciones 1:N y 1:1 declaradas una vez en `models/orm/index.js` |
+| Migraciones | `sql/init.sql` estático; los cambios se aplican a mano | `pnpm db:migrate` versiona el esquema (rollback incluido) |
+| Cambio de esquema | Hay que reescribir cada query | Basta actualizar el `include`/atributo usado |
+
+**Conclusión:** el SQL crudo es más explícito y sirve como referencia académica, pero el ORM reduce el código repetido, centraliza las asociaciones y hace que los cambios de esquema impacten menos consultas. Por eso este proyecto usa **Sequelize** como fuente de verdad y conserva `sql/init.sql` solo como referencia.
 
 ---
 
@@ -315,6 +363,25 @@ UPDATE usuarios SET rol = 'admin'    WHERE email = 'gabriieller@gmail.com';
 UPDATE usuarios SET rol = 'usuario'  WHERE email = 'gabriieller@gmail.com';
 ```
 
+### Datos de ejemplo (Módulo 7)
+
+La migración `j-seed-datos.cjs` crea de forma idempotente **3 usuarios, 4 mascotas y 3 adopciones** para que los listados y el catálogo tengan datos reales (clave común de todos ellos: `123456`):
+
+| Usuario | Email | Rol |
+|---------|-------|-----|
+| María Valdivia | `maria.valdivia@gmail.com` | usuario |
+| Jorge Ríos | `jorge.rios@correo.cl` | usuario |
+| Karla López | `karla.lopez@correo.cl` | usuario |
+
+| Mascota | Tipo | Dueño | Estado |
+|---------|------|-------|--------|
+| Rex | Perro | Jorge Ríos | Adoptada por Karla |
+| Luna | Gato | María Valdivia | Adoptada por Jorge |
+| Rocky | Perro | Jorge Ríos | Adoptada por María |
+| Michi | Gato | Karla López | Disponible |
+
+Estos datos se eliminan con `pnpm db:migrate:undo` (migración `j-seed-datos`), que borra solo las filas sembradas.
+
 ### Panel `/admin`
 
 - `GET /admin` — vista: tabla con **Avatar, Nombre, Contacto, Rol, Mascotas publicadas, Mascotas adoptadas, Registro y Acciones** (ver, editar, eliminar).
@@ -325,8 +392,8 @@ UPDATE usuarios SET rol = 'usuario'  WHERE email = 'gabriieller@gmail.com';
 
 Para preservar la integridad referencial y el historial de datos, el sistema utiliza **soft delete** en lugar de borrado físico:
 
-- **`mascotas`** y **`adopciones`** tienen una columna `activo` (BOOLEAN, default `TRUE`).
-- Al eliminar un usuario, el sistema **desactiva** sus mascotas y adopciones (`activo = false`) en vez de borrarlas.
+- **`usuarios`**, **`mascotas`** y **`adopciones`** tienen una columna `activo` (BOOLEAN, default `TRUE`).
+- Al eliminar un usuario, el sistema **desactiva** al usuario y sus mascotas y adopciones (`activo = false`) en vez de borrarlos.
 - Los queries de listado filtran solo registros con `activo = true`, por lo que los datos desactivados no aparecen en la interfaz.
 - La eliminación se realiza dentro de una **transacción** para garantizar atomicidad.
 
@@ -347,14 +414,14 @@ Admin hace clic en "Eliminar usuario"
  (409)       1. Desactivar mascotas del usuario
              2. Desactivar adopciones del usuario
              3. Desactivar adopciones de sus mascotas
-             4. Eliminar el usuario del sistema
+             4. Desactivar el usuario (activo = false)
 ```
 
 **Ejemplo:**
 
 | Escenario | Resultado |
 |-----------|-----------|
-| Usuario A publicó mascotas que **nadie adoptó** | ✅ Se desactivan las mascotas y se elimina al usuario |
+| Usuario A publicó mascotas que **nadie adoptó** | ✅ Se desactivan las mascotas y el usuario |
 | Usuario A publicó mascotas que **otros adoptaron** | ❌ Bloqueado: "No se puede eliminar porque tiene adopciones gestionadas por otros usuarios" |
 | Usuario que **solo adoptó** (no publicó) | ✅ Se desactivan sus adopciones, las mascotas de otros quedan intactas |
 
@@ -368,6 +435,7 @@ Animal-Friends-SQL/
 ├── .env                        # Variables de entorno (no commitear)
 ├── .env.example                # Plantilla de variables de entorno
 ├── package.json
+├── reflexion.md                # Justificación de decisiones técnicas (Módulo 7)
 │
 ├── config/
 │   ├── dbClient.js             # Conexión PostgreSQL (instancia Sequelize)
@@ -397,7 +465,7 @@ Animal-Friends-SQL/
 │   │   └── adopcion.js         # Modelo Sequelize: adopciones
 │   ├── adopciones.js           # Repositorio adopciones (transacción, joins)
 │   ├── mascotas.js             # Repositorio mascotas (paginación, joins)
-│   └── usuario.js              # Repositorio usuarios
+│   └── usuario.js              # Repositorio usuarios (filtros, soft delete)
 │
 ├── routes/
 │   ├── adopciones.js           # POST / y GET / (JWT)
@@ -409,17 +477,21 @@ Animal-Friends-SQL/
 ├── migrations/
 │   ├── create-tables.cjs        # Migración inicial: usuarios, mascotas y adopciones (idempotente)
 │   ├── g-agregar-rol-usuarios.cjs  # Agrega columna rol + usuario semilla admin (idempotente)
-│   └── h-agregar-activo-soft-delete.cjs  # Agrega columna activo para soft delete (idempotente)
+│   ├── h-agregar-activo-soft-delete.cjs  # Agrega columna activo a mascotas/adopciones (idempotente)
+│   ├── i-agregar-activo-usuarios.cjs     # Agrega columna activo a usuarios (idempotente)
+│   └── j-seed-datos.cjs        # Datos de ejemplo: 3 usuarios, 4 mascotas, 3 adopciones (idempotente)
 │
 ├── sql/
 │   └── init.sql                # Esquema PostgreSQL (referencia; las tablas se crean con migraciones)
 │
 ├── logs/
-│   └── log.txt                 # Registro de accesos (auto-generado, no commitear)
+│   ├── log.txt                 # Registro de accesos (auto-generado, no commitear)
+│   └── transacciones-fallidas.log  # ROLLBACK de transacciones (auto-generado, no commitear)
 │
 ├── utils/
 │   ├── AppError.js           # Clase error personalizada
-│   └── catchAsync.js         # Wrapper async/await
+│   ├── catchAsync.js         # Wrapper async/await
+│   └── loggerTransaccion.js  # Log en archivo de transacciones que terminan en ROLLBACK
 │
 ├── public/
 │   ├── css/                  # shared, home, login, registro, crear-mascota, admin-usuarios, error
@@ -483,10 +555,10 @@ Animal-Friends-SQL/
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/admin/api/usuarios` | Listar usuarios (sin clave) con mascotas publicadas y adoptadas |
+| `GET` | `/admin/api/usuarios` | Listar usuarios (sin clave) con mascotas publicadas y adoptadas. Filtros opcionales por query params: `?nombre=&email=&rol=` |
 | `GET` | `/admin/api/usuarios/:id` | Obtener detalle de un usuario con sus listas |
 | `PUT` | `/admin/api/usuarios/:id` | Editar nombre, apellido, email, teléfono y rol |
-| `DELETE` | `/admin/api/usuarios/:id` | Eliminar usuario (soft delete: desactiva mascotas y adopciones) |
+| `DELETE` | `/admin/api/usuarios/:id` | Eliminar usuario (soft delete: desactiva usuario, mascotas y adopciones) |
 
 ### Adopciones (API REST)
 
