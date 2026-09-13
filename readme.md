@@ -447,13 +447,14 @@ Animal-Friends-SQL/
 │   ├── adopciones.js           # Adoptar mascota + listar adopciones
 │   ├── admin.js                # Panel de administración (roles)
 │   ├── mascotas.js             # CRUD mascotas
+│   ├── upload.js               # Subida de archivos (POST /upload)
 │   └── usuario.js              # Registro + Login
 │
 ├── helpers/
 │   └── autenticacion.js        # JWT: generarToken + verificarToken
 │
 ├── middlewares/
-│   ├── errorHandler.js         # Manejo global de errores (HTML o JSON)
+│   ├── errorHandler.js         # Manejo global de errores (HTML o JSON); errors de multer → 400
 │   ├── esAdmin.js              # Restringe rutas a usuarios con rol 'admin' (403)
 │   └── registrarAcceso.js      # Log de accesos en logs/log.txt
 │
@@ -472,6 +473,7 @@ Animal-Friends-SQL/
 │   ├── admin.js                # Vista y API del panel de administración (JWT + rol)
 │   ├── mascotas.js             # API REST mascotas (JWT)
 │   ├── pages.js                # Rutas de páginas (HTML) + catch-all 404
+│   ├── upload.js               # POST /upload (JWT + multer)
 │   └── usuario.js              # API REST usuarios
 │
 ├── migrations/
@@ -558,7 +560,7 @@ Animal-Friends-SQL/
 | `GET` | `/admin/api/usuarios` | Listar usuarios (sin clave) con mascotas publicadas y adoptadas. Filtros opcionales por query params: `?nombre=&email=&rol=` |
 | `GET` | `/admin/api/usuarios/:id` | Obtener detalle de un usuario con sus listas |
 | `PUT` | `/admin/api/usuarios/:id` | Editar nombre, apellido, email, teléfono y rol |
-| `DELETE` | `/admin/api/usuarios/:id` | Eliminar usuario (soft delete: desactiva usuario, mascotas y adopciones) |
+| `DELETE` | `/admin/api/usuarios/:id` | Eliminar usuario (soft delete: desactiva usuario, mascotas y adopciones). Valida existencia (404) y bloquea si tiene adopciones gestionadas por otros (409) |
 
 ### Adopciones (API REST)
 
@@ -566,6 +568,12 @@ Animal-Friends-SQL/
 |--------|------|-------------|
 | `POST` | `/adopciones` | Registrar adopción (requiere JWT) |
 | `GET` | `/adopciones` | Listar adopciones con nombre de mascota y adoptante |
+
+### Archivos (subida de archivos) — requiere JWT
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/upload` | Sube un archivo (campo `archivo`, multipart/form-data). Convierte a WebP (Sharp), lo guarda en `uploads/` y devuelve `{ status, message, data: { url } }`. Valida tipo de imagen (jpeg/png/webp/gif) y tamaño máximo 10 MB → responde **400** en caso de error y **401** sin token |
 
 ---
 
