@@ -52,6 +52,12 @@ class adminController {
             return next(new AppError('No puedes eliminar tu propia cuenta', 400));
         }
 
+        // Validar que el usuario exista (y no esté ya desactivado)
+        const usuario = await usuariosModel.getById(id);
+        if (!usuario) {
+            return next(new AppError('Usuario no encontrado', 404));
+        }
+
         // Verificar si el usuario tiene adopciones gestionadas por otros
         const tieneAdopcionesAjenas = await usuariosModel.tieneAdopcionesDeOtros(id);
         if (tieneAdopcionesAjenas) {

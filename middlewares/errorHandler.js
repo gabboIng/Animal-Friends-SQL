@@ -1,4 +1,20 @@
+import multer from 'multer';
+
 export const globalErrorHandler = (err, req, res, next) => {
+    // Errores de subida de archivos (multer): se responden como 400 controlado
+    // en lugar de un 500 genérico, cumpliendo "validar tipo y tamaño en la subida".
+    const mensajesMulter = {
+        LIMIT_FILE_SIZE: 'El archivo supera el tamaño máximo permitido (10 MB)'
+    };
+    if (err instanceof multer.MulterError) {
+        err.statusCode = 400;
+        err.message = mensajesMulter[err.code] || `Error en la subida del archivo (${err.code})`;
+        err.isOperational = true;
+    } else if (err.message === 'Solo se permiten imágenes') {
+        err.statusCode = 400;
+        err.isOperational = true;
+    }
+
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
