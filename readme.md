@@ -575,6 +575,50 @@ Animal-Friends-SQL/
 |--------|------|-------------|
 | `POST` | `/upload` | Sube un archivo (campo `archivo`, multipart/form-data). Convierte a WebP (Sharp), lo guarda en `uploads/` y devuelve `{ status, message, data: { url } }`. Valida tipo de imagen (jpeg/png/webp/gif) y tamaño máximo 10 MB → responde **400** en caso de error y **401** sin token |
 
+### Consumir la API desde Postman
+
+#### 1. Autenticarse (obtener el token)
+
+1. Petición `POST http://localhost:5100/usuario/login` → **Body → raw → JSON**:
+   ```json
+   { "email": "admin@admin", "clave": "admin" }
+   ```
+2. Respuesta **200**: `{ status, message, token, usuario }`. Copiar el campo `token`.
+3. Usar ese token en todas las rutas protegidas como `Authorization: Bearer <token>`.
+
+#### 2. Rutas públicas vs protegidas
+
+| Tipo | Rutas |
+|------|-------|
+| **Públicas** | `POST /usuario/registrar`, `POST /usuario/login`, `GET /api/mascotas?page=&limit=` |
+| **Protegidas (JWT)** | `/mascotas` (GET, POST, PUT, DELETE), `POST /adopciones`, `POST /upload` |
+| **Protegidas (JWT + rol admin)** | `/admin/api/usuarios*` (responde **403** si el token no es `admin`) |
+
+#### 3. Ejemplos de éxito y de error
+
+| Petición | Respuesta esperada |
+|----------|--------------------|
+| `POST /usuario/login` con credenciales válidas | **200** `{status:"ok", message:"Login exitoso", token, usuario}` |
+| `GET /admin/api/usuarios` con token | **200** lista de usuarios (sin campo `clave`) |
+| `GET /admin/api/usuarios` sin token | **401** `"Token no proporcionado"` |
+| `GET /admin/api/usuarios` token inválido/expirado | **401** `"Token inválido"` |
+| `GET /admin/api/usuarios/9999` | **404** `"Usuario no encontrado"` |
+| `DELETE /admin/api/usuarios/23` (con adopciones ajenas) | **409** bloqueo explicado |
+| `DELETE /admin/api/usuarios/8` (propia cuenta admin) | **400** `"No puedes eliminar tu propia cuenta"` |
+| `POST /upload` con archivo `.txt` | **400** `"Solo se permiten imágenes"` |
+| `POST /upload` con archivo > 10 MB | **400** `"El archivo supera el tamaño máximo permitido (10 MB)"` |
+| `POST /upload` con imagen válida | **201** `{status:"ok", data:{ url: "/uploads/<nombre>.webp" }}` |
+
+#### 4. Subida de archivos (curl)
+
+```bash
+curl -X POST http://localhost:5100/upload \
+  -H "Authorization: Bearer <TOKEN>" \
+  -F "archivo=@foto.png"
+```
+
+> El token expira a la **1 hora** (`expiresIn: '1h'`); si recibís `401`, volvé a hacer login.
+
 ---
 
 ## Autor
