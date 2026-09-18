@@ -6,6 +6,12 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
     define: {
         underscored: true,
         timestamps: true
+    },
+    dialectOptions: {
+        ssl: {
+            require: true,
+            rejectUnauthorized: false
+        }
     }
 });
 
