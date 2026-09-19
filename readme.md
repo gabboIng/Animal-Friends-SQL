@@ -1,5 +1,6 @@
 # Animal Friends
-Link: https://animal-friends-sql.onrender.com
+##Link: https://animal-friends-sql.onrender.com
+
 Aplicación web fullstack para la adopción de mascotas. Permite a los usuarios registrarse, publicar mascotas disponibles para adopción, editarlas, eliminarlas, adoptarlas y navegar por un catálogo paginado.
 
 ![Hero Banner](public/img/mascota2.png)
